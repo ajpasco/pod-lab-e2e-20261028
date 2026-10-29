@@ -12,6 +12,7 @@ const USAGE = [
 const EXIT_CODES = {
   usage: 2,
   argument: 2,
+  'unknown-id': 1,
   unreadable: 1,
   corrupt: 1,
   unwritable: 1,
