@@ -1,8 +1,8 @@
 # Technical blueprint: shelf
 
-Revision 9
+Revision 10
 
-Blueprint of PRD revision 8 and mockup revision 6. (PRD revisions 6 and 7 changed one non-functional sentence, carried here as D11, and the tag legend; no requirement or criterion changed.) Every `REQ-nn` below is an id the PRD gave; this
+Blueprint of PRD revision 9 and mockup revision 6. (PRD revisions 6 and 7 changed one non-functional sentence, carried here as D11, and the tag legend; PRD revision 9 added increment amendment 1, carried here as section 14, delta 1; no requirement or criterion changed.) Every `REQ-nn` below is an id the PRD gave; this
 document creates none.
 
 Deciders are named as: **the user** (a recorded answer, Q-number or D-number of the preparation
@@ -529,6 +529,39 @@ The sections of `PRACTICES.md` C that this project does not run: **types** (decl
 chose in D3; shelf holds no secret), **container lint** (no `Dockerfile`). The declines of types,
 dependency audit and secret scan are each a recorded default, accepted by the user (Q18 item 6, D9).
 
+## 14. Increment deltas
+
+Deltas made after the first build landed (INCREMENT.md section 3, item 2). Each names the layer the
+change lands in, the lines of the pinned contract that change, the register rows for every new or
+changed criterion, every technical choice the build needs, and who decided each.
+
+### Delta 1: story 2, done and drop (2026-10-28)
+
+The founder's decision, in their words: "story 2 of the plan: done and drop, as docs/eval-plan.md
+and docs/PRD.md already specify" (PRD section 10, amendment 1). No product question was asked.
+
+- **Layer.** Rules (`app/src/shelf.mjs`): `done`, `drop`, the id check, and their routing in the
+  order of checks; section 3 already places REQ-03 and REQ-04 there. Boundary (`app/shelf.mjs`):
+  the `unknown-id` kind enters its exit-code table at exit 1, as section 10 fixes. Store
+  (`app/src/store.mjs`): unchanged and never edited by story 2 (section 9).
+- **Pinned contract.** No line of section 10 changes. The success lines `done <id> <title>` and
+  `dropped <id> <title>`, the messages for a missing id, a non-numeric id and an unknown id, the
+  exit codes 0, 1 and 2, and the usage text naming all four commands are already fixed there, and
+  story 1 shipped the usage text.
+- **Verification register.** No criterion is new or changed, so no register row is added or
+  changed (80 rows). The rows of REQ-03 c1 to c14, REQ-04 c1 to c14, REQ-06 c3, c4 and c6, REQ-07
+  c3, c4 and c5 (`done`, `drop`), REQ-08 c2, c3 and c4 (`done`, `drop`) and REQ-09 c3, c4, c7, c8,
+  c9 and c10 (`done`, `drop`) are the ones the eval plan assigned at gate 5, now written as code in
+  `eval/tests/story-2.test.mjs` (eval plan section 12, delta 1). Their evidence is unchanged: each
+  row's `rows.txt` line.
+- **Technical choices the build needs, and who decided.** Every one is already recorded: the
+  order of checks, TD-4 (the user, Q15); the exit codes, TD-10 (PRD clause); `done` always
+  rewriting the file, TD-13 (recorded default); id lookup converting the digit string with
+  `Number`, TD-14 (recorded default); the two files story 2 edits and the create-then-edit
+  sequence, section 9 (the user, D10). This delta adds no decision.
+- **Conventions and production readiness.** No convention is needed that section 13 does not
+  state, so the conventions step gains and changes no tool; no line of section 12 changes.
+
 ## Change log
 
 - **Revision 1:** first draft of the blueprint of PRD revision 5 and mockup revision 4.
@@ -568,3 +601,6 @@ dependency audit and secret scan are each a recorded default, accepted by the us
   header names PRD revision 8 and mockup revision 6. R62-005: no `package.json` at the root is a
   recorded default not covered by D2 or D5, in TD-2, section 12 Dependencies and section 13 step 5.
   The register is unchanged (80 rows).
+- **Revision 10:** increment delta 1 (section 14): story 2, done and drop, from the founder's
+  decision of 2026-10-28; the header names PRD revision 9. No decision, convention or contract
+  line changed. The register is unchanged (80 rows).

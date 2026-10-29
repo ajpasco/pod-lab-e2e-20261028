@@ -1,8 +1,8 @@
 # Eval plan and stories: shelf
 
-Revision 5.
+Revision 6.
 
-Written against PRD revision 8 and blueprint revision 9 (both approved; revisions after PRD 5 and blueprint 4 changed no requirement, criterion or register row). Every `REQ-nn` below is an id
+Written against PRD revision 9 and blueprint revision 10 (revisions after PRD 5 and blueprint 4 changed no requirement, criterion or register row; PRD 9 and blueprint 10 record increment delta 1, story 2, carried here as section 12). Every `REQ-nn` below is an id
 the PRD gave; this plan mints none. `Qn` and `Dn` cite `docs/PREPARATION-STATE.md`.
 
 ## 1. Conventions of this plan
@@ -412,7 +412,7 @@ names only `app/shelf.mjs` and `app/src/shelf.mjs`.
 `app/src/shelf.mjs`, `app/src/store.mjs`), `eval/stories/1.md` (its brief, written at gate 7 from this
 section) and `eval/stories/1.expect` (the list in this section). Story 2: `eval/stories/2.txt` (listing
 `app/shelf.mjs` and `app/src/shelf.mjs`), `eval/stories/2.md` and `eval/stories/2.expect`, shipped with
-story 2's packet after story 1 merges.
+story 2's packet after story 1 merges (section 12, delta 1).
 
 **Story 1 rows (48).**
 T-REQ-01-P1, P2, P3, P4, P5, P6, P8, P10, P11; T-REQ-01-N1 to N8;
@@ -644,3 +644,48 @@ testable, because Q14 was narrowed to allow a row to check that the usage on std
   - R62-003: the header names PRD revision 8 and blueprint revision 9.
   - R62-004: Open point 6 added (whether the gate's machine runs as root); section 8 points to it.
   - No row, state, count or `.expect` list changed.
+- **Revision 6.** Increment delta 1 (section 12): story 2's 50 rows written as code in
+  `eval/tests/story-2.test.mjs`; the story-2 packet files shipped; the 29-row `.expect` list of
+  section 6 confirmed against main. The header names PRD revision 9 and blueprint revision 10. No
+  row, state, count or `.expect` list changed.
+
+## 12. Increment deltas
+
+Deltas made after the first build landed (INCREMENT.md section 3, item 3). Each lists the new,
+changed and retired rows, and, for every new or changed row, its expected state against the current
+main, which the story's `.expect` records.
+
+### Delta 1: story 2, done and drop (2026-10-28)
+
+The founder's decision, in their words: "story 2 of the plan: done and drop, as docs/eval-plan.md
+and docs/PRD.md already specify" (PRD section 10, amendment 1; blueprint section 14, delta 1). No
+product question was asked.
+
+- **New rows:** none. **Changed rows:** none. **Retired rows:** none, so there is no
+  `eval/stories/2.retire`. Every row keeps the id, Given/When/Then, kind, owner and state this plan
+  gave it at gate 5; the counts of section 7 are unchanged (98 rows).
+- **Rows as code.** The 50 story-2 rows of section 6, until now rows in this plan only (INCREMENT.md
+  section 3, item 4), are written as code in `eval/tests/story-2.test.mjs` from their Given/When/Then
+  in section 4: one `node --test` test per row, its title starting with the row id, each starting
+  `node app/shelf.mjs` as a child process in a fresh temporary directory and observing only stdout,
+  stderr, the exit code and the bytes or presence of files there, as section 2 says. The file holds
+  its own copies of the assertion helpers that `story-1.test.mjs` holds, in the same shape, so that
+  neither test file depends on the other; `eval/tests/harness.mjs` is unchanged. `eval/tap-to-rows.mjs`
+  already held the 50 ids under `story-2.test.mjs`, keyed on that file's presence, so its expected-id
+  list is unchanged and is now active: a story-2 row that does not run is written
+  `fail <id> did not run`.
+- **Expected state against the current main**, story 1 merged (main at `869f034`), where `done`
+  and `drop` are unknown commands: the state-before-the-build column of section 4 holds row for
+  row. Run on 2026-10-28 with `sh eval/run.sh` against that `app/`: the 29 rows of the
+  `eval/stories/2.expect` list in section 6 fail, each with the reason the column states (the first
+  `done` or `drop` the row runs exits 2 where 0 or 1 is expected), the other 21 story-2 rows pass,
+  and the 48 story-1 rows pass. The packet ships that list unchanged as `eval/stories/2.expect`.
+- **Packet files shipped:** `eval/stories/2.txt` (`app/shelf.mjs`, `app/src/shelf.mjs`, as section 6
+  and D10), `eval/stories/2.md` (the brief) and `eval/stories/2.expect` (29 lines).
+- **Restraint.** No surface gains or loses a control that the plan does not already assert: `done`
+  and `drop` are two of the four commands the PRD names, the usage text has named them since story
+  1, and T-REQ-05-N3 already asserts that the four are the only commands. The four restraint rows
+  of section 1 stand; none is added.
+- **Gaps and untestable** (sections 8 and 9): unchanged. The permission rows of story 2
+  (T-REQ-03-N7, T-REQ-07-P3, P4, N3, N4, T-REQ-08-P2, P3, N2, N3) are among the 15 of section 8 and
+  carry the same `cannot stage: running as root` handling.

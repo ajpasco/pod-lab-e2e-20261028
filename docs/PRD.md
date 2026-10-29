@@ -1,6 +1,6 @@
 # PRD: shelf
 
-Revision 8.
+Revision 9.
 
 Source tags in brackets: "scope" is the confirmed Gate 1 idea; Q1 to Q19 are the recorded answers
 in `docs/PREPARATION-STATE.md`; D-numbers are the decisions recorded there.
@@ -381,3 +381,17 @@ precedence of argument errors and file errors.
 - **Revision 7**: legend updated to Q1 to Q19 and the D-numbers; no requirement or criterion changed.
 - **Revision 8**: legend corrected for Q16 to Q18 (gate 6 review R6-006 d); no requirement or
   criterion changed.
+- **Revision 9**: increment amendment 1 (section 10), story 2, done and drop, from the founder's
+  decision of 2026-10-28; no requirement or criterion added, changed or removed.
+
+## 10. Increment amendments
+
+Amendments made after the first build landed (INCREMENT.md section 3, item 1). Each is numbered,
+dated, and names who decided, in their words.
+
+- **Amendment 1** (2026-10-28; decided by the founder). The founder's decision, in their words:
+  "story 2 of the plan: done and drop, as docs/eval-plan.md and docs/PRD.md already specify". No
+  product question was asked and none was answered. No requirement or criterion is added, changed
+  or removed, and no id is reused: REQ-03 and REQ-04, and the `done` and `drop` criteria of REQ-06
+  (c3, c4, c6), REQ-07 (c3, c4, c5), REQ-08 (c2, c3, c4) and REQ-09 (c3, c4, c7, c8, c9, c10),
+  stand as written and are what story 2 builds (section 7, "story 2 is done and drop").
