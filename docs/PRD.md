@@ -1,12 +1,13 @@
 # PRD: shelf
 
-Revision 9.
+Revision 10.
 
 Source tags in brackets: "scope" is the confirmed Gate 1 idea; Q1 to Q19 are the recorded answers
-in `docs/PREPARATION-STATE.md`; D-numbers are the decisions recorded there.
+in `docs/PREPARATION-STATE.md`; D-numbers without a hyphen (D11) are the decisions recorded there.
 Q5, Q9, Q10 and Q14 are accepted defaults; Q16 and Q17 are technical choices the user made between
 stated options; Q18 is partly defaults the user accepted; the rest are the user's product answers.
-This PRD cites only the scope, Q1 to Q15, Q19 and D11.
+A tag with a hyphen, `D-<n>`, is a defect record, `docs/defects/D-<n>.md`, whose founder's decision
+the criterion carries (section 10). This PRD cites only the scope, Q1 to Q15, Q19, D11 and D-2.
 
 ## 1. Problem statement
 
@@ -269,6 +270,13 @@ One role: **the reader**, the single person running shelf on their own machine. 
 2. `shelf done 1` exits 1, puts a message on stderr and prints nothing on stdout. [Q10, Q11]
 3. `shelf drop 1` exits 1, puts a message on stderr and prints nothing on stdout. [Q10, Q11]
 4. In each case nothing is changed on disk. [Q10]
+5. Two commands at once: when two shelf commands are started in the same moment on the same
+   `shelf.json` (two processes, for example `shelf done 1` and `shelf done 2`), a command that is
+   refused because the file cannot be written changes nothing, so its book keeps the status it had
+   in `shelf list` afterwards; and a command that exits 0 printed a line that was true of the shelf
+   at some moment, so when one or both exit 0 at least one of their changes shows in `shelf list`
+   afterwards. That the other change may be lost when both exit 0 is accepted, and is the
+   blueprint's (section 8). [D-2; amendment 2]
 
 ### REQ-09: Refuse a corrupt shelf file
 
@@ -383,6 +391,9 @@ precedence of argument errors and file errors.
   criterion changed.
 - **Revision 9**: increment amendment 1 (section 10), story 2, done and drop, from the founder's
   decision of 2026-10-28; no requirement or criterion added, changed or removed.
+- **Revision 10**: increment amendment 2 (section 10), defect D-2, from the founder's decision of
+  2026-10-28; REQ-08 criterion 5 added. No criterion changed or removed; no id reused. The legend
+  names the `D-<n>` defect tag.
 
 ## 10. Increment amendments
 
@@ -395,3 +406,17 @@ dated, and names who decided, in their words.
   or removed, and no id is reused: REQ-03 and REQ-04, and the `done` and `drop` criteria of REQ-06
   (c3, c4, c6), REQ-07 (c3, c4, c5), REQ-08 (c2, c3, c4) and REQ-09 (c3, c4, c7, c8, c9, c10),
   stand as written and are what story 2 builds (section 7, "story 2 is done and drop").
+- **Amendment 2** (2026-10-28; decided by the founder, login ajpasco). Defect D-2
+  (`docs/defects/D-2.md`), found by the QA pass of story 2 on main `a9c2f92`: two shelf commands
+  started in the same moment could end with the command that reported failure having changed
+  `shelf.json` and the command that reported success having changed nothing. The PRD was silent on
+  two commands at once, though the Failed-command definition (section 4) already says a failed
+  command never changes the file. The record put three behaviours to the founder: (a) accept and
+  record it, (b) a per-process temporary file name, so a non-zero exit never changes the disk and a
+  printed line always describes a document that was on disk, while the accepted lost update stays,
+  (c) a lock. The founder's decision, in their words: "D-2: fix now, option (b), a per-process
+  temporary file name." REQ-08 criterion 5 is added, stating option (b) as the reader observes it;
+  the temporary file's name is a technical choice and is the blueprint's (TD-20). No criterion is
+  changed or removed and no id is reused. Section 7's non-goal "ship more than two stories" is left
+  as written: story 3 is the fix of a defect under INCREMENT.md section 9, which the founder
+  decided, not a third feature.
