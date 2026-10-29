@@ -1,9 +1,11 @@
 // The store: every read and write of shelf.json, its checks and its errors. It knows no command.
 import fs from 'node:fs';
+import { pid } from 'node:process';
 
 const SHELF_FILE = 'shelf.json';
-// Same directory as shelf.json, so the rename that replaces the file is atomic.
-const TEMP_FILE = '.shelf.json.tmp';
+// Same directory as shelf.json, so the rename that replaces the file is atomic. Named for the
+// writing process, so two commands at once never write to or rename each other's file (TD-20).
+const TEMP_FILE = `.shelf.json.${pid}.tmp`;
 const STATUSES = ['to read', 'read'];
 
 export class ShelfError extends Error {
