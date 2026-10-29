@@ -1,9 +1,9 @@
 # Technical blueprint: shelf
 
-Revision 10
+Revision 11
 
-Blueprint of PRD revision 9 and mockup revision 6. (PRD revisions 6 and 7 changed one non-functional sentence, carried here as D11, and the tag legend; PRD revision 9 added increment amendment 1, carried here as section 14, delta 1; no requirement or criterion changed.) Every `REQ-nn` below is an id the PRD gave; this
-document creates none.
+Blueprint of PRD revision 10 and mockup revision 6. (PRD revisions 6 and 7 changed one non-functional sentence, carried here as D11, and the tag legend; PRD revision 9 added increment amendment 1, carried here as section 14, delta 1, with no requirement or criterion changed; PRD revision 10 added REQ-08 c5 by increment amendment 2, carried here as section 14, delta 2.) Every `REQ-nn` below is an id the PRD gave; this
+document creates none. `D-<n>` with a hyphen is a defect record, `docs/defects/D-<n>.md`.
 
 Deciders are named as: **the user** (a recorded answer, Q-number or D-number of the preparation
 state), **recorded default** (this blueprint's choice where the user did not decide, open to the
@@ -50,7 +50,7 @@ code), as the tables in section 5 and the message table below fix.
 
 ## 4. Verification register
 
-One row per acceptance criterion (80). Every mechanism is an acceptance row run with `node --test`,
+One row per acceptance criterion (81: the 80 of the PRD's first build and REQ-08 c5, added by section 14, delta 2). Every mechanism is an acceptance row run with `node --test`,
 which spawns `node app/shelf.mjs` in a fresh temporary directory, stages the state in words from the
 mockup (writing `shelf.json` in the shape of section 7 where a state is needed), and observes only
 stdout, stderr, the exit code and the bytes on disk. Rows observe titles and ids through `shelf list`,
@@ -136,6 +136,7 @@ paragraph after the table and Open points 2.
 | REQ-08 c2 | **[non-root]** Row T-REQ-08-… assigned at gate 5: same staging, `done 1` exits 1, stderr non-empty, stdout empty. Same precondition and gap handling | its `rows.txt` line; if root, the recorded gap (Q10) |
 | REQ-08 c3 | **[non-root]** Row T-REQ-08-… assigned at gate 5: same staging, `drop 1` exits 1, stderr non-empty, stdout empty. Same precondition and gap handling | its `rows.txt` line; if root, the recorded gap (Q10) |
 | REQ-08 c4 | **[non-root]** Row T-REQ-08-… assigned at gate 5: after each of the three commands the file's bytes and the directory listing equal what was staged, so no partial or temporary file is left. Same precondition and gap handling | its `rows.txt` line; if root, the recorded gap (Q10) |
+| REQ-08 c5 | Row T-REQ-08-N4 (section 14, delta 2; no `chmod`, so it runs as root too): with a shelf of {1 to read Dune; 2 to read Emma}, `done 1` and `done 2` are started in the same moment as two processes, forty times over, restaging between trials; in every trial a `done` that exited non-zero printed nothing on stdout and `list` afterwards still shows its book `to read`, and when one or both exited 0 `list` shows at least one of their books `read` | its `rows.txt` line |
 | REQ-09 c1 | Row T-REQ-09-… assigned at gate 5: with a file that is not valid JSON, `list` exits 1, stderr non-empty, stdout empty | its `rows.txt` line |
 | REQ-09 c2 | Row T-REQ-09-… assigned at gate 5: same file, `add Dune` exits 1, stderr non-empty, stdout empty | its `rows.txt` line |
 | REQ-09 c3 | Row T-REQ-09-… assigned at gate 5: same file, `done 1` exits 1, stderr non-empty, stdout empty | its `rows.txt` line |
@@ -176,7 +177,7 @@ places: the command-line arguments and the contents of `shelf.json`.
 | REQ-05 (command word) | The first argument must be exactly `add`, `list`, `done` or `drop`; case-sensitive | No word: exit 2, usage | Any other word: exit 2, usage (the word is echoed on the first line) | Not applicable | Nothing |
 | REQ-06 (missing file) | Absence (`ENOENT`) of `shelf.json` is read as the empty shelf | Treated as empty shelf; only a successful `add` writes the file | Not applicable | Not applicable | Nothing |
 | REQ-07 (unreadable) | Any read failure other than `ENOENT` is unreadable | Not applicable | Not applicable | The operating system's permission refusal is reported: exit 1, message with the error code | The file's contents are not echoed |
-| REQ-08 (unwritable) | The write path (a check that the existing file is writable, then a temporary file in the same directory, then rename) fails as a whole | Not applicable | Not applicable | The refusal is reported: exit 1, message with the error code; the temporary file is removed | The file's contents are not echoed |
+| REQ-08 (unwritable) | The write path (a check that the existing file is writable, then a temporary file named for the writing process in the same directory, then rename) fails as a whole | Not applicable | Not applicable | The refusal is reported: exit 1, message with the error code; the temporary file is removed | The file's contents are not echoed |
 | REQ-09 (corrupt) | The JSON is parsed, then its shape is checked as section 7 says | Empty file is not valid JSON: corrupt | Invalid JSON, or wrong shape: exit 1, fixed message, file untouched | Not applicable | The file's contents are not echoed; the message carries only a fixed description of the shape fault |
 
 Application-wide: shelf logs nothing and writes no file other than `shelf.json` (and its removed
@@ -238,9 +239,11 @@ status, an empty title); they are here because Q9 makes corrupt any valid JSON t
 shelf writes, and that covers every shape shelf never writes.
 
 **How the file is written.** A recorded default, accepted by the user (Q18 item 1, D4): build the whole document,
-check that an existing `shelf.json` is writable (`accessSync` with `W_OK`), write it to
-`.shelf.json.tmp` in the same directory, then `renameSync` it over `shelf.json`; if any step fails,
-remove the temporary file and report unwritable. Why: a direct `writeFileSync` truncates the file
+check that an existing `shelf.json` is writable (`accessSync` with `W_OK`), write it to a temporary
+file in the same directory, named for the writing process (`.shelf.json.<pid>.tmp`; TD-20, section
+14 delta 2, the founder's decision on D-2; before delta 2 the name was the shared `.shelf.json.tmp`),
+then `renameSync` it over `shelf.json`; if any step fails, remove that temporary file and report
+unwritable. Why: a direct `writeFileSync` truncates the file
 before writing, so a full disk or a kill mid-write leaves the reader's whole log empty or half-written
 and then refused as corrupt, while the rename replaces the file whole or not at all. Rename would
 otherwise replace a read-only file in a writable directory, so the explicit `W_OK` check is what keeps
@@ -260,7 +263,12 @@ acting on it at once. Decider: recorded default (the PRD's single role makes it 
 a lost update when two commands write at once). What happens: there is no lock; each command reads the whole file, then
 writes the whole file, so the last write wins and an earlier concurrent change can be lost. The
 temporary-and-rename write keeps each write whole, so a concurrent reader sees either the old or the
-new document, never a torn one. Two writers share the temporary file's name; that is not guarded.
+new document, never a torn one. Each writer has its own temporary file, named for its process
+(TD-20; section 14, delta 2, from the founder's decision on D-2), so a command's rename installs the
+document that command built: a command that reports failure has changed nothing, and a command that
+reports success installed its own document, which the other writer may then replace. Before delta 2
+the two writers shared one temporary file name, which was not guarded; D-2 records what that did
+(the failed command's document installed, the successful command's lost).
 
 ## 9. Stories and integration
 
@@ -270,11 +278,14 @@ Two stories, as the user's scope fixes. [scope; PRD section 7]
 |---|---|---|
 | 1 | `add` and `list`; the unknown-command path; the store with missing, unreadable, corrupt, unwritable and the write method; the error class; the boundary, its usage text and its exit-code table | Creates all three files: `app/shelf.mjs`, `app/src/shelf.mjs`, `app/src/store.mjs` |
 | 2 | `done` and `drop`, and routing them in the order of checks; the unknown-id kind in the boundary's exit-code table | Edits `app/shelf.mjs` and `app/src/shelf.mjs` only; never `app/src/store.mjs` |
+| 3 | The fix of D-2 (section 14, delta 2): the temporary file's name becomes per-process (TD-20) | Edits `app/src/store.mjs` only; never `app/shelf.mjs` or `app/src/shelf.mjs` |
 
 Story 2 edits two files story 1 created; the user accepted this create-then-edit sequence as a
 recorded limitation of the disjoint-scope rule (D10), and story 2's scope file names only those two
 files. Story 1's scope file (`eval/stories/1.txt`) lists its three files and story 2's
-(`eval/stories/2.txt`) lists its two.
+(`eval/stories/2.txt`) lists its two. Story 3 is an increment in sequence, after stories 1 and 2
+merged (INCREMENT.md section 3, item 5: the disjoint-scope rule is for stories built in parallel);
+its scope file (`eval/stories/3.txt`) lists `app/src/store.mjs` alone.
 
 Order: story 1, then story 2; story 2 builds on the files story 1 created. Until story 2, `done` and
 `drop` are not routed and fall into the unknown-command path (the usage text already lists all four
@@ -304,9 +315,10 @@ it. Detail (rows per story, `eval/stories/<n>.expect`) belongs to the eval plan.
 | TD-14 | Id lookup converts the digit string with `Number`; a value that matches no stored id, including one too large to be exact, is an unknown id | recorded default (PRD Unknown id definition) |
 | TD-15 | The tests invoke `node app/shelf.mjs <args>` as a child process with the working directory set to a fresh temporary directory, and never import `app/`. The reader runs `node app/shelf.mjs <args>` or an alias; there is no launcher and no manifest | recorded default for the tests; the reader's invocation: the user (Q18 item 4, D7) |
 | TD-16 | Test framework for `eval/`: `node --test`, built into Node 22, with its TAP reporter (`--test-reporter=tap`) converted by `eval/run.sh` into `eval/report/rows.txt`; a row's test name is its row id; a deferred row is left out with `--test-skip-pattern` as RUNTIMES.md describes; `eval/runtime` holds the single line `node 22` | recorded default |
-| TD-17 | No lock on `shelf.json`; last write wins | recorded default (the PRD's single role makes it unlikely; the cost is a lost update when two commands write at once) |
+| TD-17 | No lock on `shelf.json`; last write wins. Unchanged by delta 2: the lost update stays; what delta 2 removes is a failed command's document reaching the disk (section 8) | recorded default (the PRD's single role makes it unlikely; the cost is a lost update when two commands write at once) |
 | TD-18 | Complexity limit 10 | recorded default (PRACTICES.md names no figure) |
 | TD-19 | Row-gap handling for the permission rows as section 4 says | the user for REQ-08 (Q10); recorded default for REQ-07 and REQ-03 c12 |
+| TD-20 | The temporary file of the write path (TD-8) is named for the writing process, so two commands at once never write to or rename each other's temporary file; its name is `.shelf.json.<pid>.tmp`, with the process id read from `node:process` (an import, not the `process` global the store's lint rule bars) | a per-process name: the founder (D-2, 2026-10-28, ajpasco: "fix now, option (b), a per-process temporary file name"). The exact form `.shelf.json.<pid>.tmp` and the `node:process` import: a default proposed by the packet drafter, not the founder's decision |
 
 **Exit codes and messages**, one line per case (stdout is empty in every case but success). The prefix
 `shelf: ` begins every message line. `<…>` is filled by shelf. Usage text, printed in full after the
@@ -401,7 +413,7 @@ command line, one person, own machine, no web app, no server, no database.
 | Shutdown | In scope in the form that fits: all work is synchronous and ends with the process; the exit code is set on `process.exitCode`, so stdout is flushed. A kill mid-write leaves the old file whole (temporary and rename). Recorded default. |
 | Health | Excluded: no platform polls a command-line tool. Excluded: recorded default derived from the scope ("not a web app, a server or a database"); brought back by a platform that polls shelf. |
 | Timeouts | Excluded: no outbound call. Excluded: recorded default derived from the scope ("not a web app, a server or a database"); brought back by any outbound call. |
-| Shared objects | In scope: `shelf.json` is the one; decided in section 8: no lock, last write wins (recorded default). The recommended enforcement in the store is declined for a file: recorded default, accepted by the user (Q18 item 6, D9). |
+| Shared objects | In scope: `shelf.json` is the one; decided in section 8: no lock, last write wins (recorded default). The recommended enforcement in the store is declined for a file: recorded default, accepted by the user (Q18 item 6, D9). Delta 2 (D-2, the founder): each writer's temporary file is its own (TD-20); "no lock, last write wins" stands. |
 | Retries and idempotency | In scope: `add` is deliberately not idempotent, a repeat creates a second book (user, Q8); `done` repeated is safe and succeeds again (user, Q3); `drop` repeated is refused as an unknown id (PRD REQ-04 c6); `list` is read-only (PRD REQ-02 c5). |
 | Schema evolution | Excluded: the file has one shape and no version field; a changed shape would make old files corrupt. Excluded by recorded default (scope silent); brought back by a second shape of the file. |
 | Backups and retention | Excluded: none. `shelf.json` is the reader's file and copies of it are theirs to make; no figure is invented. Recorded default; brought back by a requirement to recover a lost shelf. |
@@ -562,6 +574,33 @@ and docs/PRD.md already specify" (PRD section 10, amendment 1). No product quest
 - **Conventions and production readiness.** No convention is needed that section 13 does not
   state, so the conventions step gains and changes no tool; no line of section 12 changes.
 
+### Delta 2: defect D-2, two commands at once (2026-10-28)
+
+The founder's decision, in their words (2026-10-28, login ajpasco): "D-2: fix now, option (b), a
+per-process temporary file name." The record is `docs/defects/D-2.md`; the PRD carries the decision
+as REQ-08 c5 (PRD section 10, amendment 2).
+
+- **Layer.** Store (`app/src/store.mjs`), the only file story 3 edits (section 9): the temporary
+  file of the write path is named for the writing process (TD-20). Rules and boundary: unchanged.
+- **Pinned contract.** No line of section 10's message table, exit codes, usage or success lines
+  changes. Section 7, "How the file is written", changes one fact: the temporary file's name is
+  `.shelf.json.<pid>.tmp` instead of the shared `.shelf.json.tmp`. Section 8 says what that
+  changes and what it keeps. Section 12, Reliability, "Shared objects" keeps "no lock, last write
+  wins".
+- **Verification register.** One row added for the one new criterion, REQ-08 c5: T-REQ-08-N4,
+  the register row in section 4 (81 rows). Its mechanism is two `done` processes started in the
+  same moment, forty trials, observed through the exit codes, stdout and `list`; its evidence is
+  its `rows.txt` line. No existing register row changes.
+- **Technical choices the build needs, and who decided.** A per-process temporary file name:
+  the founder (D-2, option (b)). The exact form `.shelf.json.<pid>.tmp`, and reading the id from
+  `node:process` as an import so the store's `no-restricted-globals` rule on `process` is kept: a
+  default proposed by the packet drafter (TD-20), open to the founder's change. TD-8 (temporary
+  file and rename) and TD-17 (no lock, last write wins) stand.
+- **Conventions and production readiness.** No convention is needed that section 13 does not
+  state: the store still imports only `node:` modules, and the conventions step gains and changes
+  no tool. Section 12 changes one line, Reliability "Shared objects", to name delta 2; the decision
+  there stands.
+
 ## Change log
 
 - **Revision 1:** first draft of the blueprint of PRD revision 5 and mockup revision 4.
@@ -604,3 +643,7 @@ and docs/PRD.md already specify" (PRD section 10, amendment 1). No product quest
 - **Revision 10:** increment delta 1 (section 14): story 2, done and drop, from the founder's
   decision of 2026-10-28; the header names PRD revision 9. No decision, convention or contract
   line changed. The register is unchanged (80 rows).
+- **Revision 11:** increment delta 2 (section 14): defect D-2, from the founder's decision of
+  2026-10-28; the header names PRD revision 10. TD-20 added (per-process temporary file name);
+  section 7's write method, section 8, section 9 (story 3) and section 12's "Shared objects" line
+  changed to match; TD-17 carries a note. The register gains one row, REQ-08 c5 (81 rows).
