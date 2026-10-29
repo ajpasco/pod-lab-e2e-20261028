@@ -23,6 +23,16 @@ function reportRefusal(error) {
   if (error.kind === 'usage') console.error(USAGE);
 }
 
+// A failed write to stdout (TD-21). A closed pipe (EPIPE) means the reader stopped reading, as
+// `list | head -1` does: it got what it asked for, so nothing goes on stderr and the exit code
+// stays as it is. Any other write failure is unclassified, reported as under TD-11.
+function reportStdoutError(error) {
+  if (error.code === 'EPIPE') return;
+  console.error('shelf: unexpected error');
+  console.error(error.stack ?? String(error));
+  process.exitCode = 1;
+}
+
 function main(argv) {
   try {
     const lines = run(argv);
@@ -40,5 +50,7 @@ function main(argv) {
   }
 }
 
+// The listener goes on before main runs, so no write can fail unheard (TD-21).
+process.stdout.on('error', reportStdoutError);
 // exitCode rather than exit(), so stdout is flushed before the process ends.
 process.exitCode = main(process.argv.slice(2));
