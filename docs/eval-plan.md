@@ -1,8 +1,8 @@
 # Eval plan and stories: shelf
 
-Revision 7.
+Revision 8.
 
-Written against PRD revision 10 and blueprint revision 11 (revisions after PRD 5 and blueprint 4 changed no requirement, criterion or register row until PRD 10, which added REQ-08 c5, and blueprint 11, which added its register row; PRD 9 and blueprint 10 record increment delta 1, story 2, and PRD 10 and blueprint 11 record increment delta 2, defect D-2, both carried here as section 12). Every `REQ-nn` below is an id
+Written against PRD revision 11 and blueprint revision 12 (revisions after PRD 5 and blueprint 4 changed no requirement, criterion or register row until PRD 10, which added REQ-08 c5, and blueprint 11, which added its register row; PRD 11 added REQ-02 c8 and blueprint 12 its register row; PRD 9 and blueprint 10 record increment delta 1, story 2, PRD 10 and blueprint 11 record increment delta 2, defect D-2, and PRD 11 and blueprint 12 record increment delta 3, defect D-3 with D-4 and D-1 carried, all three carried here as section 12). Every `REQ-nn` below is an id
 the PRD gave; this plan mints none. `Qn` and `Dn` cite `docs/PREPARATION-STATE.md`; `D-<n>` with a
 hyphen is a defect record, `docs/defects/D-<n>.md`.
 
@@ -112,8 +112,12 @@ its process.
 
 **Files.** `eval/tests/harness.mjs` (spawn, fresh temporary directory, staging, byte comparison,
 directory listing, permission staging and restoring) is shared and is not a test file. Tests live in
-`eval/tests/story-1.test.mjs`, `eval/tests/story-2.test.mjs` and `eval/tests/story-3.test.mjs`, one
-file per story, so a story's rows stay out of main until its packet opens. `eval/stories/` holds each
+`eval/tests/story-1.test.mjs`, `eval/tests/story-2.test.mjs`, `eval/tests/story-3.test.mjs` and
+`eval/tests/story-4.test.mjs`, one file per story, so a story's rows stay out of main until its
+packet opens; and in `eval/tests/defects.test.mjs`, which holds the rows that reproduce defects the
+founder deferred (section 12, delta 3: T-REQ-01-N9 for D-4), each listed in `eval/deferred.txt`
+beside its defect id until the founder puts the defect in, when the packet that fixes it removes the
+line and the row stays where it is. `eval/stories/` holds each
 story's packet files: the scope file `<n>.txt`, the brief `<n>.md` and the expected failures
 `<n>.expect` (section 6). Framework: `node --test`, built into Node 22.
 
@@ -172,7 +176,8 @@ Story 1 rows are stated against the state "empty `app/`": `node app/shelf.mjs` d
 child exits 1, Node's `Cannot find module` is on stderr and stdout is empty. Story 2 rows are stated
 against "main with story 1 merged", the moment story 2's packet opens: `done` and `drop` are then
 unknown commands (exit 2, usage on stderr, stdout empty, file untouched). Both assume a non-root runner
-(section 8, Gaps).
+(section 8, Gaps). The story-3 row is stated against main with story 2 merged (`a9c2f92`), and the
+story-4 row and the deferred row T-REQ-01-N9 against main with story 3 merged (`d01f4a9`).
 
 The row is `fails` unless it says `passes`. A `passes` row asserts only what already holds in that state;
 the reason is given in the row.
@@ -200,6 +205,7 @@ the reason is given in the row.
 | T-REQ-01-N6 | Restraint, file surface. Given an empty directory, when the reader runs `add Dune` and then `add Emma` (both exit 0), then the directory holds exactly one entry, `shelf.json`: no temporary file, no other file and no subdirectory is left. Traces to what `add` leaves on disk (REQ-01 c8); PRD section 7 non-goals ("use a database"). | restraint | 1 | fails: `add` exits 1; the directory is empty where `shelf.json` is expected |
 | T-REQ-01-N7 | Restraint, what `add` stores. Given an empty directory, when the reader runs `add Dune` and `add Emma` (both exit 0), then `shelf.json` parses as JSON and every value in it, at any depth, is one of the known values: the ids `1` and `2`, the next id `3`, the status `to read`, and the titles `Dune` and `Emma`. No other value (no date, no rating, nothing else) is stored anywhere in the document. Traces to REQ-01 (what a book is: id, status, title; PRD section 4 Book); PRD section 7 non-goals ("search, rate, or record dates"). | restraint | 1 | fails: `add` exits 1; `shelf.json` does not exist |
 | T-REQ-01-N8 | Restraint, text from data is not a control. Given an empty directory, when the reader runs `add drop 1` and then `add list` (both exit 0), then stdout is exactly `added 1 drop 1` and `added 2 list`, and `list` prints exactly `1 to read drop 1` and `2 to read list`: the words are title text and neither dropped book 1 nor listed anything at the add. Traces to REQ-01 c3 (arguments joined into the title); PRD section 4 Title. | restraint | 1 | fails: `add` exits 1 where 0 is expected |
+| T-REQ-01-N9 | Deferred (D-4; `eval/deferred.txt`). Given a `shelf.json` holding no books whose next id is the largest id shelf can store (9007199254740991), when the reader runs `add Dune` and then `list`, then if the `add` was refused (non-zero exit) it printed nothing on stdout, put a message on stderr and left `shelf.json` untouched; and in either case `list` afterwards exits 0 with nothing on stderr: shelf reads its own file back without refusing it as corrupt, because a file shelf wrote on a successful command is still a shelf. The row never reads what next id the file stores, so it chooses no behaviour at the ceiling, which the founder has not decided, and rules out none of the options D-4's record lists. (REQ-01 c1 and c2; PRD section 4 Corrupt shelf file and Failed command; D-4; added by section 12, delta 3) | integration | none yet: deferred by the founder (D-4); the story that fixes D-4, when the founder puts it in | fails, against main with story 3 merged (`d01f4a9`): `add Dune` exits 0 and writes a next id of 2^53, then `list` is refused (`list after the add exits 1 where 0 is expected: shelf: shelf.json is not a shelf (nextId is not a positive integer); fix or remove it`); reported `deferred T-REQ-01-N9 D-4 <reason>`, in no `.expect` |
 
 ### REQ-02: List the books
 
@@ -211,6 +217,7 @@ the reason is given in the row.
 | T-REQ-02-P4 | Given a shelf of {1 to read Dune}, when the reader runs `list`, then the exit code is 0. (REQ-02 c4) | integration | 1 | fails: exit 1 where 0 is expected |
 | T-REQ-02-P5 | Given two directories, one with a shelf of {1 to read Dune} and one with a shelf of {1 to read Emma; 2 read Ulysses}, when the reader runs `list` in each, then each prints the books of its own `shelf.json` only. (REQ-02 c6) | integration | 1 | fails: both directories print nothing |
 | T-REQ-02-P6 | Given a shelf of {1 to read Dune; 2 read Emma}, when the reader runs `list x` and `list`, then both exit 0 and both print exactly the same two lines. (REQ-02 c7) | integration | 1 | fails: exit 1 where 0 is expected |
+| T-REQ-02-P7 | Given a shelf of 20,000 to-read books titled `Book number <id>` (about 1.4 MB of `list` output, far more than a pipe buffer holds), when the reader runs `list` and stops reading after the first chunk, closing their end of the pipe as `head -1` does, then the first line they took is `1 to read Book number 1`, the exit code is 0, stderr is empty and `shelf.json` is untouched. (REQ-02 c8; D-3; added by section 12, delta 3) | integration | 4 | fails, against main with story 3 merged (`d01f4a9`): `exit 1 (signal null) where 0 is expected`, with Node's unhandled EPIPE stack on stderr |
 | T-REQ-02-N1 | Given a shelf holding no books, when the reader runs `list`, then stdout is empty and the exit code is 0. (REQ-02 c3) | integration | 1 | fails: exit 1 where 0 is expected |
 | T-REQ-02-N2 | Given a shelf of {1 to read Dune; 2 read Emma}, when the reader runs `list`, then `shelf.json` is untouched. (REQ-02 c5) | integration | 1 | passes: the assertion is only that the bytes are unchanged, which holds when the process fails to start |
 
@@ -349,10 +356,14 @@ T-REQ-04-N3, N4, N7; T-REQ-06-N2, N3; the four REQ-07 and four REQ-08 rows; the 
 
 ## 5. Coverage: every criterion and register row to a row id
 
-All 81 criteria of the PRD and all 81 register rows of blueprint section 4 (same keys) map as follows
-(REQ-08 c5 and its row were added by section 12, delta 2).
+All 82 criteria of the PRD and all 82 register rows of blueprint section 4 (same keys) map as follows
+(REQ-08 c5 and its row were added by section 12, delta 2; REQ-02 c8 and its row by section 12,
+delta 3).
 The restraint rows T-REQ-01-N6, T-REQ-01-N7, T-REQ-01-N8 and T-REQ-05-N3 have no register row; they
-trace to the requirement named and to the PRD's non-goals.
+trace to the requirement named and to the PRD's non-goals. The deferred row T-REQ-01-N9 (D-4) has no
+register row of its own: it traces to REQ-01 c1 and c2 and to the PRD's Corrupt shelf file
+definition, whose rows T-REQ-01-P1 and P2 and the REQ-09 rows exist; it states no behaviour at the
+id ceiling, since the founder has decided none.
 
 | Criterion | Row id(s) | Criterion | Row id(s) |
 |---|---|---|---|
@@ -396,7 +407,7 @@ trace to the requirement named and to the PRD's non-goals.
 | REQ-04 c7 | T-REQ-04-N4 | REQ-04 c11 | T-REQ-04-N6 |
 | REQ-04 c8 | T-REQ-04-P4 | REQ-04 c12 | T-REQ-04-N7 |
 | REQ-04 c13 | T-REQ-04-N8 | REQ-04 c14 | T-REQ-04-N9 |
-| REQ-08 c5 | T-REQ-08-N4 | | |
+| REQ-08 c5 | T-REQ-08-N4 | REQ-02 c8 | T-REQ-02-P7 |
 
 ## 6. Stories
 
@@ -405,15 +416,21 @@ trace to the requirement named and to the PRD's non-goals.
 | 1 | Creates `app/shelf.mjs`, `app/src/shelf.mjs`, `app/src/store.mjs` | nothing (main has an empty `app/`) | The 48 story-1 rows below: every row for `add`, `list`, the unknown-command path, and the missing, unreadable, corrupt and unwritable file for `add` and `list` |
 | 2 | Edits to `app/shelf.mjs` and `app/src/shelf.mjs` only; never `app/src/store.mjs` | Story 1: it edits the two files story 1 creates, and its rows use story 1's `add` and `list` | The 50 story-2 rows below: every `done` and `drop` row |
 | 3 | Edits to `app/src/store.mjs` only; never `app/shelf.mjs` or `app/src/shelf.mjs` (section 12, delta 2) | Stories 1 and 2, both merged: it edits the file story 1 created, and its row uses story 2's `done` and story 1's `list` | The 1 story-3 row below: T-REQ-08-N4 |
+| 4 | Edits to `app/shelf.mjs` only; never `app/src/shelf.mjs` or `app/src/store.mjs` (section 12, delta 3) | Stories 1 to 3, all merged: it edits the file story 1 created, and its row uses story 1's `list` | The 1 story-4 row below: T-REQ-02-P7 |
 
-Every row has exactly one owner story. No story-1 row uses `done` or `drop`. The scope is not disjoint
+Every row has exactly one owner story, with one exception this plan records rather than hides: the
+deferred row T-REQ-01-N9 (D-4, section 12, delta 3) is owned by no story yet, because the founder
+deferred the defect and chose no behaviour; its owner is the story that fixes D-4, when the founder
+puts it in, and until then `eval/deferred.txt` keeps it out of the verdict. No story-1 row uses `done` or `drop`. The scope is not disjoint
 in the strict sense of the rubric: stories 1 and 2 both name `app/shelf.mjs` and `app/src/shelf.mjs`,
 story 1 to create them and story 2 to edit them afterwards. This is the blueprint's section 9 design
 (the store is complete in story 1 so that story 2 never edits it) and the user's stated scope. The user
 accepted create-then-edit as a recorded limitation (D10); story 2's scope file (`eval/stories/2.txt`)
 names only `app/shelf.mjs` and `app/src/shelf.mjs`. Story 3 is an increment in sequence after both
 merged, so the disjoint-scope rule, which is for stories built in parallel, does not apply to its
-editing a file story 1 created (INCREMENT.md section 3, item 5).
+editing a file story 1 created (INCREMENT.md section 3, item 5). Story 4 is the same kind of
+increment in sequence, after story 3 merged, editing `app/shelf.mjs`, which story 1 created and
+story 2 edited.
 
 **Packet files.** Story 1: `eval/stories/1.txt` (its scope file, listing `app/shelf.mjs`,
 `app/src/shelf.mjs`, `app/src/store.mjs`), `eval/stories/1.md` (its brief, written at gate 7 from this
@@ -421,7 +438,10 @@ section) and `eval/stories/1.expect` (the list in this section). Story 2: `eval/
 `app/shelf.mjs` and `app/src/shelf.mjs`), `eval/stories/2.md` and `eval/stories/2.expect`, shipped with
 story 2's packet after story 1 merges (section 12, delta 1). Story 3: `eval/stories/3.txt` (listing
 `app/src/store.mjs`), `eval/stories/3.md` and `eval/stories/3.expect` (one line), shipped with the
-D-2 packet after story 2 merges (section 12, delta 2).
+D-2 packet after story 2 merges (section 12, delta 2). Story 4: `eval/stories/4.txt` (listing
+`app/shelf.mjs`), `eval/stories/4.md` and `eval/stories/4.expect` (one line), shipped with the D-3
+packet after story 3 merges (section 12, delta 3), which also ships `eval/deferred.txt` with the one
+line `T-REQ-01-N9 D-4`.
 
 **Story 1 rows (48).**
 T-REQ-01-P1, P2, P3, P4, P5, P6, P8, P10, P11; T-REQ-01-N1 to N8;
@@ -527,6 +547,22 @@ fail T-REQ-08-N4
 
 Story 3 has no `passes` row and retires no row, so there is no `eval/stories/3.retire`.
 
+**Story 4 rows (1).** T-REQ-02-P7.
+
+### `eval/stories/4.expect` (1 row: story 4 against main with story 3 merged)
+
+```
+fail T-REQ-02-P7
+```
+
+Story 4 has no `passes` row and retires no row, so there is no `eval/stories/4.retire`.
+
+**Deferred rows (1), owned by no story yet.** T-REQ-01-N9 (D-4), in `eval/tests/defects.test.mjs`,
+listed in `eval/deferred.txt`. It fails against main with story 3 merged and is reported
+`deferred T-REQ-01-N9 D-4 <reason>`, outside the verdict; it is in no `.expect`, since a listed row
+does not fail the run (INCREMENT.md section 9). Should it pass one day, the gate, the preview and the
+rehearsal note that the list names a passing row: the defect may be fixed.
+
 **On a runner that is root.** Both files assume a non-root runner. As root, the 15 permission rows fail
 `cannot stage: running as root`. That adds, to story 1, the six rows T-REQ-07-P1, P2, N1, N2 and
 T-REQ-08-P1, N1; and to story 2, the five rows T-REQ-03-N7, T-REQ-07-N3, N4 and T-REQ-08-N2, N3 (the
@@ -537,27 +573,32 @@ failures until the founder defers them (section 8).
 
 Rows per requirement. "Fail S1" is the number of that requirement's story-1 rows expected to fail
 against the empty `app/`; "Fail S2" the story-2 rows expected to fail against story-1 main; "Fail S3"
-the story-3 rows expected to fail against story-2 main (section 12, delta 2).
+the story-3 rows expected to fail against story-2 main (section 12, delta 2); "Fail S4" the story-4
+rows expected to fail against story-3 main (section 12, delta 3). The deferred row T-REQ-01-N9
+(D-4) fails against story-3 main too but is reported `deferred`, so it is in no Fail column.
 
-| Requirement | P | N | Integration | Restraint | Total | Fail S1 | Fail S2 | Fail S3 |
-|---|---|---|---|---|---|---|---|---|
-| REQ-01 | 11 | 8 | 16 | 3 | 19 | 17 | 2 | 0 |
-| REQ-02 | 6 | 2 | 8 | 0 | 8 | 6 | 1 | 0 |
-| REQ-03 | 5 | 9 | 14 | 0 | 14 | 0 | 8 | 0 |
-| REQ-04 | 5 | 9 | 14 | 0 | 14 | 0 | 8 | 0 |
-| REQ-05 | 3 | 3 | 5 | 1 | 6 | 5 | 0 | 0 |
-| REQ-06 | 1 | 6 | 7 | 0 | 7 | 3 | 2 | 0 |
-| REQ-07 | 4 | 4 | 8 | 0 | 8 | 0 | 2 | 0 |
-| REQ-08 | 3 | 4 | 7 | 0 | 7 | 0 | 2 | 1 |
-| REQ-09 | 8 | 8 | 16 | 0 | 16 | 0 | 4 | 0 |
-| **Total** | **46** | **53** | **95** | **4** | **99** | **31** | **29** | **1** |
+| Requirement | P | N | Integration | Restraint | Total | Fail S1 | Fail S2 | Fail S3 | Fail S4 |
+|---|---|---|---|---|---|---|---|---|---|
+| REQ-01 | 11 | 9 | 17 | 3 | 20 | 17 | 2 | 0 | 0 |
+| REQ-02 | 7 | 2 | 9 | 0 | 9 | 6 | 1 | 0 | 1 |
+| REQ-03 | 5 | 9 | 14 | 0 | 14 | 0 | 8 | 0 | 0 |
+| REQ-04 | 5 | 9 | 14 | 0 | 14 | 0 | 8 | 0 | 0 |
+| REQ-05 | 3 | 3 | 5 | 1 | 6 | 5 | 0 | 0 | 0 |
+| REQ-06 | 1 | 6 | 7 | 0 | 7 | 3 | 2 | 0 | 0 |
+| REQ-07 | 4 | 4 | 8 | 0 | 8 | 0 | 2 | 0 | 0 |
+| REQ-08 | 3 | 4 | 7 | 0 | 7 | 0 | 2 | 1 | 0 |
+| REQ-09 | 8 | 8 | 16 | 0 | 16 | 0 | 4 | 0 | 0 |
+| **Total** | **47** | **54** | **97** | **4** | **101** | **31** | **29** | **1** | **1** |
 
-Overall: 99 rows (46 positive, 53 negative); 95 `integration`, 4 `restraint`, no `unit`, `e2e`,
+Overall: 101 rows (47 positive, 54 negative); 97 `integration`, 4 `restraint`, no `unit`, `e2e`,
 `production` or `review`. Per story: story 1 has 48 rows (31 fail, 17 pass); story 2 has 50 rows (29
-fail, 21 pass); story 3 has 1 row (1 fail, 0 pass); 61 rows fail before their story and 38 pass. The
-99 rows are the 81 criteria (one row each), plus 11 rows from the four splits (REQ-07 c5 into 4 rows,
-REQ-08 c4 into 3, REQ-09 c9 and c10 into 4 each: 15 rows for 4 criteria), plus 3 rows for the
-real-command forms (T-REQ-01-P7, P9, T-REQ-02-P3), plus 4 restraint rows: 81 + 11 + 3 + 4 = 99.
+fail, 21 pass); story 3 has 1 row (1 fail, 0 pass); story 4 has 1 row (1 fail, 0 pass); 1 row,
+T-REQ-01-N9, is owned by no story yet and deferred (D-4); 62 rows fail before their story and 38
+pass. The 101 rows are the 82 criteria (one row each), plus 11 rows from the four splits (REQ-07 c5
+into 4 rows, REQ-08 c4 into 3, REQ-09 c9 and c10 into 4 each: 15 rows for 4 criteria), plus 3 rows
+for the real-command forms (T-REQ-01-P7, P9, T-REQ-02-P3), plus 4 restraint rows, plus the 1
+deferred row of D-4, which traces to criteria that already have their rows: 82 + 11 + 3 + 4 + 1 =
+101.
 
 ## 8. Gaps
 
@@ -597,6 +638,20 @@ real-command forms (T-REQ-01-P7, P9, T-REQ-02-P3), plus 4 restraint rows: 81 + 1
   acceptance criteria and have no row.
 - **Order of checks.** The PRD says the rule holds for every combination and its criteria sample it
   (Q15). The plan's rows test those samples only.
+- **A write failure on stdout that is not a closed pipe (REQ-02 c8; blueprint TD-21).** T-REQ-02-P7
+  stages the one case the founder decided, a reader that closes the pipe. A fix that silenced every
+  failure to write stdout, not only the closed pipe, would pass it, and no row stages another such
+  failure: the one way to do so from outside the process, a stdout opened on `/dev/full` (`ENOSPC`),
+  exists on Linux only, and the rows run on the founder's machine as well as the gate's. That any
+  other write failure is still reported as unclassified (TD-11) is held by the fresh reader against
+  blueprint TD-21, not by a row. The refusal rows of every requirement still hold a handler that
+  silenced stderr or forced exit 0 for anything but a stdout write failure.
+- **The id ceiling (D-4, deferred).** The PRD is silent on what `add` does when the next id cannot
+  be represented, and the founder deferred the defect without choosing a behaviour, so no criterion
+  states one and T-REQ-01-N9 asserts only that the shelf stays readable; it is listed in
+  `eval/deferred.txt` and reported outside the verdict until the founder puts D-4 in.
+- **D-1 (deferred, no row).** The founder deferred it and, after TD-20 renamed the temporary file,
+  had its record carried with `Row: none`: the trigger is unreachable, so no row stages it.
 
 No acceptance criterion is without a row.
 
@@ -677,6 +732,14 @@ testable, because Q14 was narrowed to allow a row to check that the usage on std
   as well as on a laptop (section 12, delta 2); story 3 added to sections 2, 6 and 7 (99 rows); the coverage map
   of section 5 gains REQ-08 c5; section 8's blueprint-decisions gap amended. The header names PRD
   revision 10 and blueprint revision 11. No existing row, state or `.expect` list changed.
+- **Revision 8.** Increment delta 3 (section 12): defect D-3, from the founder's decisions of
+  2026-10-28 and 2026-10-29, carrying D-4 and D-1. Two rows added: T-REQ-02-P7 for the new
+  criterion REQ-02 c8, as code in `eval/tests/story-4.test.mjs`, and the deferred row T-REQ-01-N9
+  for D-4, as code in `eval/tests/defects.test.mjs` and listed in the new `eval/deferred.txt`;
+  story 4 added to sections 2, 6 and 7 (101 rows); the coverage map of section 5 gains REQ-02 c8;
+  section 8 gains three gaps (a stdout write failure that is not a closed pipe, the id ceiling,
+  D-1). The header names PRD revision 11 and blueprint revision 12. No existing row, state or
+  `.expect` list changed.
 
 ## 12. Increment deltas
 
@@ -776,3 +839,77 @@ REQ-08 c5 (PRD section 10, amendment 2); the blueprint's delta is section 14, de
 - **Gaps and untestable** (sections 8 and 9): section 8's blueprint-decisions gap now says that the
   lost update of TD-17 is still asserted by no row, and that REQ-08 c5 has its row. No new gap; the
   row needs no `chmod`, so it is not among the 15 permission rows and runs as root too.
+
+### Delta 3: defect D-3, a reader that closes the pipe early; D-4 deferred; D-1 recorded (2026-10-29)
+
+The founder's decision on D-3, in their words (2026-10-28, login ajpasco): "D-3, a closed pipe: with
+a long list, 'shelf list | head -1' or 'shelf list | true' prints Node's unhandled 'error' event
+(EPIPE) stack to stderr; fix now, the boundary in app/shelf.mjs, stderr empty and exit 0 when stdout
+closes early." The record is `docs/defects/D-3.md`; the criterion it becomes is REQ-02 c8, with the
+definition "Stdout closes early" (PRD section 10, amendment 3); the blueprint's delta is section 14,
+delta 3 (TD-21). On 2026-10-29 the founder started the increment and had the same packet carry two
+more records, in their words: "start D-3's increment, and carry in the same packet, by my decision:
+D-4's record, its reproducing row and its eval/deferred.txt line (deferred, reason: reachable only by
+a hand edit of shelf.json); D-1's record with my deferral (reason: it only happens when someone makes
+a directory named .shelf.json.tmp by hand) and Row: none, noting it is unreachable after TD-20; and
+the one-phrase fix to blueprint section 9's 'Two stories'."
+
+- **New rows:** two. T-REQ-02-P7 (section 4, REQ-02), tracing to REQ-02 c8 and back (section 5),
+  owned by story 4. Positive, because its headline assertion is what `list` does for a reader who
+  stops early: the listing starts as criteria 1 and 2 say and the command ends with exit 0; its
+  assertions that stderr is empty and the file untouched are what the criterion says does not
+  happen. T-REQ-01-N9 (section 4, REQ-01), the reproduction of D-4, tracing to REQ-01 c1 and c2
+  and the PRD's Corrupt shelf file definition, owned by no story yet and listed in
+  `eval/deferred.txt` as `T-REQ-01-N9 D-4`. Negative, because it asserts that a shelf shelf wrote on
+  a successful command is not refused: after the `add`, `list` exits 0 with nothing on stderr, and
+  an `add` that was refused changed nothing. It never reads what next id the file stores, so it
+  chooses no behaviour at the ceiling, which the founder has not decided: it passes whether a fix
+  refuses that `add` with the file untouched (D-4's option a) or accepts it and refuses the next
+  (option b), and under option (c) it stays deferred. **Changed rows:** none. **Retired rows:**
+  none, so there is no `eval/stories/4.retire`. The counts of section 7 become 101 rows.
+- **Rows as code.** T-REQ-02-P7 is written in `eval/tests/story-4.test.mjs` from its
+  Given/When/Then: a shelf of 20,000 books staged in a fresh temporary directory, `node
+  app/shelf.mjs list` started with its stdout piped to the row, which takes the first chunk, keeps
+  its first line and destroys its end of the pipe, as `head -1` does; the row then observes the
+  exit code, stderr and the file's bytes. It uses its own asynchronous spawn, as T-REQ-08-N4 does,
+  because closing the reader's end while the child is still writing is not something the harness's
+  synchronous runner can do; it still observes nothing but stdout, stderr, the exit code and the
+  file, and imports nothing from `app/`. T-REQ-01-N9 is written in `eval/tests/defects.test.mjs`
+  from its Given/When/Then with the harness's synchronous runner. `eval/tap-to-rows.mjs` gains the
+  entries `'story-4.test.mjs': ['T-REQ-02-P7']` and `'defects.test.mjs': ['T-REQ-01-N9']`, keyed
+  on each file's presence as the other three are, so either row is written `fail <id> did not run`
+  (or, for the listed row, `fail <id> did not finish`) if it does not run. `eval/tests/harness.mjs`
+  is unchanged.
+- **Expected state against the current main**, story 3 merged (main at `d01f4a9`). T-REQ-02-P7
+  fails: the boundary writes the whole listing with one `process.stdout.write` and has no handler
+  for a write error on stdout, so when the row closes its end the write fails with `EPIPE`, Node
+  raises an unhandled `error` event, prints its stack on stderr and exits 1; the row's reason is
+  `exit 1 (signal null) where 0 is expected`. With a boundary that handles the closed pipe as TD-21
+  says, the first line is still what the reader took, the exit code is 0, stderr is empty and the
+  file is untouched, so the row passes. T-REQ-01-N9 fails too: `add Dune` on a next id of
+  9007199254740991 exits 0 and writes a next id of 2^53, which the store's shape check (a safe
+  integer) refuses on the next read, so `list` exits 1 with the corrupt message; but it is listed in
+  `eval/deferred.txt`, so the runner leaves it out of the verdict run and writes it `deferred
+  T-REQ-01-N9 D-4 list after the add exits 1 where 0 is expected: ...` from the report run. Run on
+  2026-10-29 with `sh eval/run.sh` against that `app/`: `fail T-REQ-02-P7 exit 1 (signal null)
+  where 0 is expected`, `deferred T-REQ-01-N9 D-4 ...`, and the 99 rows of stories 1 to 3 pass.
+  The packet ships `eval/stories/4.expect` with the one line `fail T-REQ-02-P7`; the deferred row
+  is in no `.expect`, because a listed row does not fail the run (INCREMENT.md section 9).
+- **Why 20,000 books.** The failure needs the listing to be larger than the pipe buffer, so that
+  the child is still writing when the reader closes; 20,000 short titles make about 1.4 MB, which
+  is many times the usual 64 KB buffer, and `list` of it takes well under a second. The count is
+  the QA draft's, kept as a default proposed by the packet drafter.
+- **Packet files shipped:** `eval/stories/4.txt` (`app/shelf.mjs`), `eval/stories/4.md` (the
+  brief) and `eval/stories/4.expect` (one line); `eval/deferred.txt` (one line, `T-REQ-01-N9 D-4`,
+  under two comment lines); `docs/defects/D-3.md`, `D-4.md` and `D-1.md`.
+- **Restraint.** No surface gains or loses a control: the four commands, their arguments, their
+  success lines and their refusals are as they were, and stdout carries the same listing; what
+  changes is only how the command ends when its reader has gone. T-REQ-05-N3 still asserts that
+  the four commands are the only ones; the refusal rows of every requirement still assert that each
+  refusal reaches stderr with its exit code, which a handler that silenced more than the closed pipe
+  would break. No restraint row is added.
+- **Gaps and untestable** (sections 8 and 9): section 8 gains three entries: a write failure on
+  stdout that is not a closed pipe has no row (the fresh reader holds TD-21's line between `EPIPE`
+  and the rest); the id ceiling has no criterion and its row is deferred; D-1 has no row by the
+  founder's decision. Section 9 is unchanged. Neither new row needs `chmod`, so neither is among
+  the 15 permission rows, and both run as root too.

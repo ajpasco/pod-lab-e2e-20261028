@@ -1,13 +1,13 @@
 # PRD: shelf
 
-Revision 10.
+Revision 11.
 
 Source tags in brackets: "scope" is the confirmed Gate 1 idea; Q1 to Q19 are the recorded answers
 in `docs/PREPARATION-STATE.md`; D-numbers without a hyphen (D11) are the decisions recorded there.
 Q5, Q9, Q10 and Q14 are accepted defaults; Q16 and Q17 are technical choices the user made between
 stated options; Q18 is partly defaults the user accepted; the rest are the user's product answers.
 A tag with a hyphen, `D-<n>`, is a defect record, `docs/defects/D-<n>.md`, whose founder's decision
-the criterion carries (section 10). This PRD cites only the scope, Q1 to Q15, Q19, D11 and D-2.
+the criterion carries (section 10). This PRD cites only the scope, Q1 to Q15, Q19, D11, D-2 and D-3.
 
 ## 1. Problem statement
 
@@ -66,6 +66,9 @@ One role: **the reader**, the single person running shelf on their own machine. 
   needs the file to be known, so it is reported only when the file was read: with a corrupt or
   unreadable file, a numeric id exits 1 as a file error. The criteria sample this rule; the rule
   holds for every combination. [Q15]
+- **Stdout closes early**: the reader of shelf's output stops reading before shelf has printed
+  everything, so the rest cannot be written: for example `shelf list | head -1` or
+  `shelf list | true` with a long list. [D-3]
 
 ## 5. Functional requirements
 
@@ -124,6 +127,11 @@ One role: **the reader**, the single person running shelf on their own machine. 
 6. In a directory with a different `shelf.json`, `shelf list` shows the books of that file.
    [scope]
 7. Extra arguments are ignored: `shelf list x` prints and exits as `shelf list` does. [Q7]
+8. When stdout closes early during `shelf list` (for example `shelf list | head -1` or
+   `shelf list | true` with a long list), nothing is put on stderr and the exit code is 0: in the
+   founder's words, "stderr empty and exit 0 when stdout closes early". What the reader took before
+   closing, if anything (`true` takes nothing), is the start of the listing of criteria 1 and 2,
+   and `shelf.json` is untouched (criterion 5). [D-3; amendment 3]
 
 ### REQ-03: Mark a book read
 
@@ -394,6 +402,10 @@ precedence of argument errors and file errors.
 - **Revision 10**: increment amendment 2 (section 10), defect D-2, from the founder's decision of
   2026-10-28; REQ-08 criterion 5 added. No criterion changed or removed; no id reused. The legend
   names the `D-<n>` defect tag.
+- **Revision 11**: increment amendment 3 (section 10), defect D-3, from the founder's decisions of
+  2026-10-28 and 2026-10-29; REQ-02 criterion 8 and the definition "Stdout closes early" added. No
+  criterion changed or removed; no id reused. The legend names D-3. The records of D-4 and D-1,
+  carried in the same packet, change no requirement, criterion or definition.
 
 ## 10. Increment amendments
 
@@ -420,3 +432,27 @@ dated, and names who decided, in their words.
   changed or removed and no id is reused. Section 7's non-goal "ship more than two stories" is left
   as written: story 3 is the fix of a defect under INCREMENT.md section 9, which the founder
   decided, not a third feature.
+- **Amendment 3** (2026-10-29; decided by the founder, login ajpasco, on 2026-10-28 and
+  2026-10-29). Defect D-3 (`docs/defects/D-3.md`), found by the founder's independent code review
+  on 2026-10-28 and reproduced by the QA orchestrator the same day: with a long list, a reader that
+  closes the pipe early (`shelf list | head -1`, `shelf list | true`) got Node's unhandled EPIPE
+  stack on stderr and exit 1. The PRD was silent on a reader that closes the pipe; blueprint
+  section 12 had excluded the case as a recorded default. The record put three behaviours to the
+  founder: a silent exit 0, one error line and exit 1, or exit 141 as a shell reports SIGPIPE. The
+  founder's decision, in their words: "D-3, a closed pipe: with a long list, 'shelf list | head -1'
+  or 'shelf list | true' prints Node's unhandled 'error' event (EPIPE) stack to stderr; fix now,
+  the boundary in app/shelf.mjs, stderr empty and exit 0 when stdout closes early." REQ-02
+  criterion 8 is added, stating the chosen behaviour in the founder's words, and the definition
+  "Stdout closes early" (section 4) names the case it covers; how the boundary detects a closed
+  pipe is a technical choice and is the blueprint's (TD-21). No criterion is changed or removed and
+  no id is reused. On 2026-10-29 the founder started the increment and had the same packet carry
+  two more records, in their words: "start D-3's increment, and carry in the same packet, by my
+  decision: D-4's record, its reproducing row and its eval/deferred.txt line (deferred, reason:
+  reachable only by a hand edit of shelf.json); D-1's record with my deferral (reason: it only
+  happens when someone makes a directory named .shelf.json.tmp by hand) and Row: none, noting it
+  is unreachable after TD-20; and the one-phrase fix to blueprint section 9's 'Two stories'." D-4
+  (`docs/defects/D-4.md`, deferred) and D-1 (`docs/defects/D-1.md`, deferred, no row) change no
+  requirement, criterion or definition of this PRD: the behaviour at the id ceiling D-4 names is
+  undecided, so no criterion states it, and its row is deferred in `eval/deferred.txt`. Section 7's
+  non-goal "ship more than two stories" is left as written: story 4 is the fix of a defect under
+  INCREMENT.md section 9, which the founder decided, not a feature.
