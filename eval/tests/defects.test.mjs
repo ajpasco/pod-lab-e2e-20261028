@@ -7,13 +7,15 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { run, tempDir, stage, bytes } from './harness.mjs';
 
-// D-4: an add at the id ceiling (the largest safe integer) succeeds and writes a next id of 2^53,
-// which every command then refuses as corrupt. The row asserts only the PRD's Corrupt definition
-// (section 4: a file shelf wrote on a successful command is still a shelf) and REQ-01 c1 and c2
-// (the shelf stays usable after a successful add). It chooses no behaviour at the ceiling, which
-// the founder has not decided: it passes whether that add is refused with the file untouched or
-// accepted with a next id shelf can read back.
-const CEILING = Number.MAX_SAFE_INTEGER; // 9007199254740991
+// D-4: an add at the id ceiling (the largest id shelf can store, 9007199254740991) succeeds and
+// writes a next id that every command then refuses as corrupt. The row asserts only the PRD's
+// Corrupt definition (section 4: a file shelf wrote on a successful command is still a shelf, so
+// shelf reads it back without refusing it) and REQ-01 c1 and c2 (the shelf stays usable after a
+// successful add), plus the Failed-command definition if the add is refused (nothing on stdout, a
+// message on stderr, the file untouched). It never reads what next id the file stores: the
+// behaviour at the ceiling is the founder's to decide (D-4, deferred), and the row rules out none
+// of the options its record lists.
+const CEILING = 9007199254740991;
 
 test('T-REQ-01-N9 an add at the id ceiling never leaves a shelf that shelf refuses as corrupt', () => {
   const dir = tempDir();
@@ -30,8 +32,6 @@ test('T-REQ-01-N9 an add at the id ceiling never leaves a shelf that shelf refus
     const refused = list.stderr.trim();
     assert.equal(list.status, 0, `list after the add exits ${list.status} where 0 is expected: ${refused}`);
     assert.equal(list.stderr, '', `list after the add put ${JSON.stringify(list.stderr)} on stderr`);
-    const doc = JSON.parse(bytes(dir).toString('utf8'));
-    assert.ok(Number.isSafeInteger(doc.nextId), `nextId ${doc.nextId} is not a safe integer`);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

@@ -130,8 +130,8 @@ One role: **the reader**, the single person running shelf on their own machine. 
 8. When stdout closes early during `shelf list` (for example `shelf list | head -1` or
    `shelf list | true` with a long list), nothing is put on stderr and the exit code is 0: in the
    founder's words, "stderr empty and exit 0 when stdout closes early". What the reader took before
-   closing is the start of the listing of criteria 1 and 2, and `shelf.json` is untouched
-   (criterion 5). [D-3; amendment 3]
+   closing, if anything (`true` takes nothing), is the start of the listing of criteria 1 and 2,
+   and `shelf.json` is untouched (criterion 5). [D-3; amendment 3]
 
 ### REQ-03: Mark a book read
 
