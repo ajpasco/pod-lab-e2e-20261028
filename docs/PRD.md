@@ -1,0 +1,383 @@
+# PRD: shelf
+
+Revision 8.
+
+Source tags in brackets: "scope" is the confirmed Gate 1 idea; Q1 to Q19 are the recorded answers
+in `docs/PREPARATION-STATE.md`; D-numbers are the decisions recorded there.
+Q5, Q9, Q10 and Q14 are accepted defaults; Q16 and Q17 are technical choices the user made between
+stated options; Q18 is partly defaults the user accepted; the rest are the user's product answers.
+This PRD cites only the scope, Q1 to Q15, Q19 and D11.
+
+## 1. Problem statement
+
+One person who reads books wants a tiny reading log, on their own machine, of which books they mean
+to read and have read. [scope]
+
+## 2. The product
+
+shelf is a tiny Node.js command-line reading log for one person on their own machine, with no
+dependencies. It keeps books in `shelf.json` in the current directory. It has four commands:
+`shelf add`, `shelf list`, `shelf done` and `shelf drop`. [scope]
+
+## 3. Users and roles
+
+One role: **the reader**, the single person running shelf on their own machine. [scope]
+
+- May: add a book, list the books, mark a book read, drop a book. [scope]
+- May not: search or rate books. `shelf search` and `shelf rate` are refused as unknown commands
+  (REQ-05 criterion 3). Dates, a web app, a server and a database are non-goals (section 7), not
+  role prohibitions. [scope]
+- There is no other role. [scope]
+
+## 4. Definitions
+
+- **Book**: one entry on the shelf, with an id, a status and a title.
+- **Shelf**: the set of all books held in `shelf.json` in the directory the command is run from.
+- **Id**: the number shelf gives a book when it is added. The first book added to an empty,
+  never-used shelf gets id 1, and each later book gets the next number. [scope, Q2]
+- **Status**: either "to read" or "read". A newly added book is "to read". [scope]
+- **Title**: the text of a book. For `add`, the arguments after `add` joined with single spaces,
+  then trimmed of leading and trailing whitespace; interior spaces are kept as given. [Q4, Q12]
+- **Empty title**: no title argument at all, or a title that is empty or only whitespace once
+  joined. [scope, Q4]
+- **Numeric id**: a string of decimal digits only, such as `1`, `12` or `007`. `1.5`, `-1`, `1a`,
+  `+1` and the empty string are non-numeric. A numeric id denotes the number it spells, so `007`
+  denotes id 7. [Q5]
+- **Missing id**: no id argument after `done` or `drop`. [scope]
+- **Unknown id**: a numeric id with no matching book, such as `0`, or `007` when there is no
+  book 7. [scope, Q5]
+- **Missing shelf file**: there is no `shelf.json` in the current directory. [Q1]
+- **Unreadable shelf file**: `shelf.json` exists but cannot be read. [scope]
+- **Corrupt shelf file**: `shelf.json` is not valid JSON, or is valid JSON that is not what shelf
+  itself writes (for example an array, a number, or an object missing its books or its next id).
+  "Its books" and "its next id" name what the file records, as Q9 does; the field names and the
+  file's exact shape are the blueprint's decision. [scope, Q9]
+- **Unwritable shelf file**: shelf needs to write `shelf.json` and cannot. [Q10]
+- **Untouched**: the file is byte-for-byte what it was before the command ran. When the file was
+  absent before the command, untouched means it is still absent. [scope, Q13]
+- **Failed command**: a command that exits with a non-zero code. Only a successful `add` creates
+  `shelf.json`; a failed command never creates or changes it, and leaves the disk as it was. [Q13]
+- **Usage**: a stderr text that lists the four commands. [scope]
+- **Order of checks**: shelf checks the command word, then the title (for `add`) or the id (for
+  `done` and `drop`), before it reads `shelf.json`. An argument error (an unknown command word, an
+  empty or missing title, a missing or non-numeric id; exit 2) therefore takes precedence over a
+  file error (an unreadable or corrupt shelf file; exit 1), whatever the file holds. An unknown id
+  needs the file to be known, so it is reported only when the file was read: with a corrupt or
+  unreadable file, a numeric id exits 1 as a file error. The criteria sample this rule; the rule
+  holds for every combination. [Q15]
+
+## 5. Functional requirements
+
+### REQ-01: Add a book
+
+**User:** the reader. [scope]
+
+**Flow**
+1. The reader runs `shelf add` followed by a title.
+2. shelf adds the book as "to read" with the next id and prints one line.
+
+**Acceptance**
+1. On a never-used shelf (no `shelf.json`, or one that has never held a book), `shelf add Dune` prints exactly `added 1 Dune` and exits 0. [scope]
+2. After that, `shelf add Emma` prints exactly `added 2 Emma` and exits 0. [scope]
+3. `shelf add Dune Messiah` (several arguments) prints exactly `added <id> Dune Messiah`: the
+   arguments joined with single spaces. [Q4]
+4. A book just added shows as "to read" in `shelf list`. [scope]
+5. Adding a title already on the shelf creates a second book with a different id; no duplicate
+   check refuses it. [Q8]
+6. Ids are never reused: with books 1, 2 and 3, after `shelf drop 3`, `shelf add X` prints
+   `added 4 X`. [Q2]
+7. Ids are never reused after the shelf has been emptied: after every book is dropped, the next
+   add gets an id higher than any id used before. [Q2]
+8. When there is no `shelf.json`, `shelf add` creates it in the current directory and exits 0.
+   [scope, Q1, Q13]
+9. Missing title: `shelf add` with no further argument exits 2, puts a message on stderr, prints
+   nothing on stdout, and adds no book. [scope, Q11]
+10. Empty title: `shelf add ""` exits 2, puts a message on stderr, prints nothing on stdout, and
+    adds no book. [scope, Q4, Q11]
+11. Whitespace-only title: `shelf add "   "` exits 2, puts a message on stderr, prints nothing on
+    stdout, and adds no book. [Q4, Q11]
+12. Surrounding spaces are trimmed: `shelf add "  Dune "` stores the title `Dune` and prints exactly
+    `added <id> Dune`. [Q12]
+13. Argument errors win over file errors: `shelf add ""` while `shelf.json` is corrupt exits 2 (not
+    1), puts a message on stderr, prints nothing on stdout, and leaves `shelf.json` untouched.
+    [Q15]
+14. Argument errors win over file errors: `shelf add` (missing title) while `shelf.json` is
+    corrupt exits 2, puts a message on stderr, prints nothing on stdout, and leaves `shelf.json`
+    untouched. [Q15, Q11]
+
+### REQ-02: List the books
+
+**User:** the reader. [scope]
+
+**Flow**
+1. The reader runs `shelf list`.
+2. shelf prints one line per book, in id order.
+
+**Acceptance**
+1. Each book is printed as one line `<id> <status> <title>`, for example `1 to read Dune` or
+   `2 read Emma`. [scope]
+2. Lines appear in ascending id order, whatever order the books were added or changed in. [scope]
+3. With no books, `shelf list` prints nothing on stdout and exits 0. [scope]
+4. `shelf list` exits 0 when it lists books. [scope]
+5. `shelf list` never changes `shelf.json`. [scope, Q1]
+6. In a directory with a different `shelf.json`, `shelf list` shows the books of that file.
+   [scope]
+7. Extra arguments are ignored: `shelf list x` prints and exits as `shelf list` does. [Q7]
+
+### REQ-03: Mark a book read
+
+**User:** the reader. [scope]
+
+**Flow**
+1. The reader runs `shelf done` followed by an id.
+2. shelf sets that book's status to "read" and prints one line.
+
+**Acceptance**
+1. `shelf done 1` on a "to read" book 1 titled `Dune` prints exactly `done 1 Dune`, exits 0, and
+   `shelf list` then shows `1 read Dune`. [scope]
+2. Other books are unchanged by it. [scope]
+3. `shelf done 1` on a book that is already "read" prints `done 1 <title>` again, exits 0, and
+   leaves the book "read". [Q3]
+4. Missing id: `shelf done` with no id exits 2, puts a message on stderr and prints nothing on
+   stdout. [scope, Q11]
+5. Non-numeric id: `shelf done abc`, `shelf done 1.5`, `shelf done -1`, `shelf done 1a` and
+   `shelf done +1` each exit 2, put a message on stderr and print nothing on stdout. [scope, Q5,
+   Q11]
+6. Unknown id: `shelf done 99` where no book 99 exists exits 1, puts a message on stderr and
+   prints nothing on stdout. [scope, Q11]
+7. `shelf done 0` exits 1, puts a message on stderr and prints nothing on stdout, because 0 is an
+   unknown id. [Q5, Q11]
+8. `shelf done 007` marks book 7 read when book 7 exists, and prints exactly `done 7 <title>`.
+   [scope, Q5]
+9. Extra arguments are ignored: `shelf done 1 2` acts on book 1 only. [Q7]
+10. Missing, non-numeric and unknown ids leave `shelf.json` and every book unchanged. [scope, Q13]
+11. Argument errors win over file errors: `shelf done abc` while `shelf.json` is corrupt exits 2,
+    puts a message on stderr, prints nothing on stdout, and leaves `shelf.json` untouched.
+    [Q15, Q11, scope]
+12. Argument errors win over file errors: `shelf done` (missing id) while `shelf.json` is
+    unreadable exits 2, puts a message on stderr, prints nothing on stdout, and leaves
+    `shelf.json` untouched. [Q15, Q11, scope]
+13. `shelf done 007` when there is no book 7 exits 1, puts a message on stderr and prints nothing
+    on stdout. [Q5, Q11]
+14. `shelf done ""` (an empty-string id) exits 2, puts a message on stderr and prints nothing on
+    stdout. [Q5, Q11]
+
+### REQ-04: Drop a book
+
+**User:** the reader. [scope]
+
+**Flow**
+1. The reader runs `shelf drop` followed by an id.
+2. shelf removes that book and prints one line.
+
+**Acceptance**
+1. `shelf drop 2` on book 2 titled `Emma` prints exactly `dropped 2 Emma`, exits 0, and
+   `shelf list` no longer shows it. [scope]
+2. Other books keep their ids, statuses and titles. [scope, Q2]
+3. A "read" book and a "to read" book can both be dropped. [scope]
+4. Missing id: `shelf drop` with no id exits 2, puts a message on stderr and prints nothing on
+   stdout. [scope, Q11]
+5. Non-numeric id: `shelf drop abc`, `shelf drop 1.5`, `shelf drop -1`, `shelf drop 1a` and
+   `shelf drop +1` each exit 2, put a message on stderr and print nothing on stdout. [scope, Q5,
+   Q11]
+6. Unknown id: `shelf drop 99` where no book 99 exists exits 1, puts a message on stderr and
+   prints nothing on stdout. [scope, Q11]
+7. `shelf drop 0` exits 1, puts a message on stderr and prints nothing on stdout, because 0 is an
+   unknown id. [Q5, Q11]
+8. `shelf drop 007` drops book 7 when book 7 exists, and prints exactly `dropped 7 <title>`.
+   [scope, Q5]
+9. Extra arguments are ignored: `shelf drop 1 2` acts on book 1 only. [Q7]
+10. Missing, non-numeric and unknown ids leave `shelf.json` and every book unchanged. [scope, Q13]
+11. Argument errors win over file errors: `shelf drop abc` while `shelf.json` is corrupt exits 2,
+    puts a message on stderr, prints nothing on stdout, and leaves `shelf.json` untouched.
+    [Q15, Q11, scope]
+12. `shelf drop 007` when there is no book 7 exits 1, puts a message on stderr and prints nothing
+    on stdout. [Q5, Q11]
+13. `shelf drop ""` (an empty-string id) exits 2, puts a message on stderr and prints nothing on
+    stdout. [Q5, Q11]
+14. Argument errors win over file errors: `shelf drop` (missing id) while `shelf.json` is corrupt
+    exits 2, puts a message on stderr, prints nothing on stdout, and leaves `shelf.json`
+    untouched. [Q15, Q11]
+
+### REQ-05: Refuse an unknown command
+
+**User:** the reader. [scope]
+
+**Flow**
+1. The reader runs `shelf` with a word that is not one of the four commands, or with no word.
+2. shelf prints usage on stderr and exits.
+
+**Acceptance**
+1. `shelf frobnicate` exits 2, prints usage on stderr and prints nothing on stdout. [scope, Q11]
+2. A bare `shelf` exits 2, prints usage on stderr and prints nothing on stdout. [Q6]
+3. `shelf search x` and `shelf rate 1 5` are unknown commands: each exits 2, prints usage on
+   stderr and prints nothing on stdout. [scope, Q11]
+4. An unknown command leaves `shelf.json` untouched. [scope, Q13]
+5. Argument errors win over file errors: `shelf frobnicate` while `shelf.json` is corrupt exits 2,
+   prints usage on stderr, prints nothing on stdout, and leaves `shelf.json` untouched.
+   [Q15, Q11, scope]
+
+### REQ-06: Treat a missing shelf file as an empty shelf
+
+**User:** the reader. [Q1]
+
+**Flow**
+1. The reader runs a command in a directory with no `shelf.json`.
+2. shelf behaves as if the shelf were empty.
+
+`shelf add` on a missing shelf file is covered by REQ-01 criterion 8.
+
+**Acceptance**
+1. `shelf list` with no `shelf.json` prints nothing and exits 0. [Q1]
+2. `shelf list` with no `shelf.json` does not create the file. [Q1]
+3. `shelf done 1` with no `shelf.json` exits 1, puts a message on stderr, prints nothing on stdout
+   and does not create `shelf.json` (unknown id). [Q1, Q11, Q13, scope]
+4. `shelf drop 1` with no `shelf.json` exits 1, puts a message on stderr, prints nothing on stdout
+   and does not create `shelf.json` (unknown id). [Q1, Q11, Q13, scope]
+5. `shelf add ""` with no `shelf.json` exits 2, puts a message on stderr, prints nothing on stdout
+   and does not create `shelf.json`. [Q13, Q1, Q11]
+6. `shelf done abc` with no `shelf.json` exits 2, puts a message on stderr, prints nothing on
+   stdout and does not create `shelf.json`. [Q13, Q1, Q11]
+7. `shelf frobnicate` with no `shelf.json` exits 2, prints usage on stderr, prints nothing on
+   stdout and does not create `shelf.json`. [Q13, Q1, Q11]
+
+### REQ-07: Refuse an unreadable shelf file
+
+**User:** the reader. [scope]
+
+**Flow**
+1. The reader runs a command while `shelf.json` is unreadable.
+2. shelf stops, reports the problem and leaves the file as it was.
+
+**Acceptance**
+1. `shelf list` exits 1, puts a message on stderr and prints nothing on stdout. [scope, Q11]
+2. `shelf add Dune` exits 1, puts a message on stderr and prints nothing on stdout. [scope, Q11]
+3. `shelf done 1` exits 1, puts a message on stderr and prints nothing on stdout. [scope, Q11]
+4. `shelf drop 1` exits 1, puts a message on stderr and prints nothing on stdout. [scope, Q11]
+5. `shelf.json` is left untouched. [scope]
+
+### REQ-08: Refuse when the shelf file cannot be written
+
+**User:** the reader. [Q10]
+
+**Flow**
+1. The reader runs `add`, `done` or `drop` while `shelf.json` (or its directory) cannot be written.
+2. shelf stops and reports the problem.
+
+**Acceptance**
+1. `shelf add Dune` exits 1, puts a message on stderr and prints nothing on stdout. [Q10, Q11]
+2. `shelf done 1` exits 1, puts a message on stderr and prints nothing on stdout. [Q10, Q11]
+3. `shelf drop 1` exits 1, puts a message on stderr and prints nothing on stdout. [Q10, Q11]
+4. In each case nothing is changed on disk. [Q10]
+
+### REQ-09: Refuse a corrupt shelf file
+
+**User:** the reader. [scope]
+
+**Flow**
+1. The reader runs a command while `shelf.json` is corrupt.
+2. shelf stops, reports the problem and leaves the file as it was.
+
+**Acceptance**
+1. Not valid JSON: `shelf list` exits 1, puts a message on stderr and prints nothing on stdout.
+   [scope, Q9, Q11]
+2. Not valid JSON: `shelf add Dune` exits 1, puts a message on stderr and prints nothing on
+   stdout. [scope, Q9, Q11]
+3. Not valid JSON: `shelf done 1` exits 1, puts a message on stderr and prints nothing on stdout.
+   This is because `1` is a numeric id, which passes the argument check, so the file must then be
+   read. [scope, Q9, Q11, Q15]
+4. Not valid JSON: `shelf drop 1` exits 1, puts a message on stderr and prints nothing on stdout.
+   [scope, Q9, Q11]
+5. Valid JSON of the wrong shape (an array, a number, or an object missing its books or its next
+   id): `shelf list` exits 1, puts a message on stderr and prints nothing on stdout. [Q9, Q11]
+6. Valid JSON of the wrong shape: `shelf add Dune` exits 1, puts a message on stderr and prints
+   nothing on stdout. [Q9, Q11]
+7. Valid JSON of the wrong shape: `shelf done 1` exits 1, puts a message on stderr and prints
+   nothing on stdout. [Q9, Q11]
+8. Valid JSON of the wrong shape: `shelf drop 1` exits 1, puts a message on stderr and prints
+   nothing on stdout. [Q9, Q11]
+9. A `shelf.json` that is not valid JSON is left untouched by each of the four commands.
+   [scope, Q9]
+10. A `shelf.json` of valid JSON but the wrong shape is left untouched by each of the four
+    commands. [scope, Q9]
+
+## 6. Non-functional requirements
+
+- Runs on Node 22. [scope]
+- No dependencies. [scope]
+- Runs as a command-line tool on the reader's own machine. [scope]
+- The shelf is `shelf.json` in the current directory. [scope]
+- The wording of error messages and of usage is recorded in the technical blueprint and is not an
+  acceptance criterion; criteria require only that a message, or usage, appears on stderr. For
+  usage, a criterion may additionally require that the four command words `add`, `list`, `done` and
+  `drop` appear in the text on stderr. [Q14, Q19, D11]
+
+## 7. Non-goals
+
+Version one deliberately does not: [scope]
+
+- be a web app or a server, or use a database;
+- search, rate, or record dates;
+- serve more than one person;
+- refuse a duplicate title (Q8);
+- ship more than two stories: story 1 is add and list, story 2 is done and drop.
+
+## 8. Open questions
+
+No question is open. Q11 to Q14 closed the four questions listed in revision 1; Q15 closed the
+precedence of argument errors and file errors.
+
+## 9. Change log
+
+- **Revision 1**: first draft from the confirmed scope and Q1 to Q10.
+- **Revision 2**: closes the four open questions of revision 1 with the user's answers:
+  - Q11, "Yes, nothing on stdout for any error." Every error criterion now states that nothing is
+    printed on stdout.
+  - Q12, "Trim, as you recommend." The Title definition trims leading and trailing whitespace;
+    REQ-01 criterion 12 added.
+  - Q13, "No. Only a successful add creates the file; every failed command leaves the disk as it
+    was." Added to the definitions as Failed command; REQ-06 criteria 3 and 4 amended.
+  - Q14, "Your default stands." The wording of messages and usage is the blueprint's; recorded under
+    Non-functional requirements.
+
+  Three rubric defects returned by the orchestrator: REQ-07 bundled two causes, so it now holds the
+  unreadable criteria only and the corrupt criteria are appended as REQ-09 (REQ-08 not renumbered);
+  the problem statement carried words that are not the user's, and is now limited to the scope;
+  REQ-06 criterion 5 was a pointer, not a criterion, and is now a sentence under the Flow.
+- **Revision 3**: Q15, "Option A: argument errors win." Added the definition Order of checks and the
+  criteria REQ-01 13, REQ-03 11 and 12, REQ-04 11 and REQ-05 5; REQ-09 criterion 3 now notes why a
+  numeric id leaves the file error at exit 1. Two corrections from the gate 3 findings:
+  - F-01: section 3 claimed more than its criteria back; it now claims only that `shelf search` and
+    `shelf rate` are refused (REQ-05 criterion 3), and dates, a web app, a server and a database are
+    named as non-goals, not role prohibitions. No criterion added for it.
+  - F-02: REQ-03 criterion 8 and REQ-04 criterion 8 now state the printed line for `007`:
+    `done 7 <title>` and `dropped 7 <title>`.
+- **Revision 4**: no user answer was needed, so none is quoted. Four corrections from findings
+  F2-01 to F2-04 of the second gate-3 check:
+  - F2-01: REQ-01 criterion 1 now says "never-used shelf", since an emptied shelf does not restart
+    at 1 (criterion 7, Id definition).
+  - F2-02: REQ-03 criteria 13 and 14 and REQ-04 criteria 12 and 13 back the definitions for `007`
+    with no book 7 and for the empty-string id.
+  - F2-03: the Order of checks definition says the criteria sample the rule; REQ-01 criterion 14
+    and REQ-04 criterion 14 added as corrupt-file samples.
+  - F2-04: REQ-06 criteria 5 to 7 added for argument errors with no `shelf.json`; the Untouched
+    definition now covers an absent file.
+- **Revision 5**: no user answer was needed, so none is quoted. Three corrections from findings
+  F3-01 to F3-03 of the third gate-3 check:
+  - F3-01: REQ-03 criteria 11 and 12, REQ-04 criterion 11 and REQ-05 criterion 5 now state, as
+    REQ-01 criterion 13 does, that a message (usage, for REQ-05) goes on stderr, nothing goes on
+    stdout and `shelf.json` is left untouched; they cite Q11 and scope.
+  - F3-02: the last bullet of section 3 carried words that are not the user's; it now reads
+    "There is no other role."
+  - F3-03: the Corrupt shelf file definition says "its books" and "its next id" name what the file
+    records, as Q9 does, and that the field names and exact shape are the blueprint's decision. No
+    criterion changed.
+- **Revision 6**: Q19 item 2, "Accept both recommendations: 1 Option A, 2 Option A." (item 2,
+  Option A, is decision D11, which narrows Q14, decided 2026-10-28). Section 6 now adds one
+  sentence: for usage, a criterion may additionally require that the four command words `add`,
+  `list`, `done` and `drop` appear in the text on stderr. The wording of messages and usage is
+  otherwise still unchecked. No requirement id and no criterion changed; REQ-05 criteria 1, 2, 3 and
+  5 keep their wording, since the Usage definition already says the text lists the four commands.
+- **Revision 7**: legend updated to Q1 to Q19 and the D-numbers; no requirement or criterion changed.
+- **Revision 8**: legend corrected for Q16 to Q18 (gate 6 review R6-006 d); no requirement or
+  criterion changed.
