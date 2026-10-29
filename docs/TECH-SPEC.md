@@ -1,8 +1,8 @@
 # Technical blueprint: shelf
 
-Revision 11
+Revision 12
 
-Blueprint of PRD revision 10 and mockup revision 6. (PRD revisions 6 and 7 changed one non-functional sentence, carried here as D11, and the tag legend; PRD revision 9 added increment amendment 1, carried here as section 14, delta 1, with no requirement or criterion changed; PRD revision 10 added REQ-08 c5 by increment amendment 2, carried here as section 14, delta 2.) Every `REQ-nn` below is an id the PRD gave; this
+Blueprint of PRD revision 11 and mockup revision 6. (PRD revisions 6 and 7 changed one non-functional sentence, carried here as D11, and the tag legend; PRD revision 9 added increment amendment 1, carried here as section 14, delta 1, with no requirement or criterion changed; PRD revision 10 added REQ-08 c5 by increment amendment 2, carried here as section 14, delta 2; PRD revision 11 added REQ-02 c8 by increment amendment 3, carried here as section 14, delta 3.) Every `REQ-nn` below is an id the PRD gave; this
 document creates none. `D-<n>` with a hyphen is a defect record, `docs/defects/D-<n>.md`.
 
 Deciders are named as: **the user** (a recorded answer, Q-number or D-number of the preparation
@@ -23,7 +23,7 @@ Node standard library reads and writes the file, and nothing needs a server, a d
 
 | Layer | File | Owns | Never does |
 |---|---|---|---|
-| Boundary | `app/shelf.mjs` | Reads `process.argv`, calls the one rule entry point, prints lines to stdout or the error to stderr, sets `process.exitCode`; holds the usage text and the table from error kind to exit code | Decides anything about books or checks anything about a title or id; touches the file system |
+| Boundary | `app/shelf.mjs` | Reads `process.argv`, calls the one rule entry point, prints lines to stdout or the error to stderr, sets `process.exitCode`; holds the usage text and the table from error kind to exit code; handles a failed write to stdout (TD-21, delta 3) | Decides anything about books or checks anything about a title or id; touches the file system |
 | Rules | `app/src/shelf.mjs` | `add`, `list`, `done`, `drop`, and the order of checks (command word, then title or id, then the file); the argument error messages | Reads `process`, prints, or touches the file system directly |
 | Store | `app/src/store.mjs` | Every read and write of `shelf.json`; detects missing, unreadable, corrupt (invalid JSON or wrong shape) and unwritable; the file error messages; the error class | Knows a command, a title rule or an exit code |
 
@@ -50,7 +50,7 @@ code), as the tables in section 5 and the message table below fix.
 
 ## 4. Verification register
 
-One row per acceptance criterion (81: the 80 of the PRD's first build and REQ-08 c5, added by section 14, delta 2). Every mechanism is an acceptance row run with `node --test`,
+One row per acceptance criterion (82: the 80 of the PRD's first build, REQ-08 c5, added by section 14, delta 2, and REQ-02 c8, added by section 14, delta 3). Every mechanism is an acceptance row run with `node --test`,
 which spawns `node app/shelf.mjs` in a fresh temporary directory, stages the state in words from the
 mockup (writing `shelf.json` in the shape of section 7 where a state is needed), and observes only
 stdout, stderr, the exit code and the bytes on disk. Rows observe titles and ids through `shelf list`,
@@ -87,6 +87,7 @@ paragraph after the table and Open points 2.
 | REQ-02 c5 | Row T-REQ-02-… assigned at gate 5: `list` leaves `shelf.json` byte-for-byte untouched | its `rows.txt` line |
 | REQ-02 c6 | Row T-REQ-02-… assigned at gate 5: two directories with different files; `list` in each shows that directory's books | its `rows.txt` line |
 | REQ-02 c7 | Row T-REQ-02-… assigned at gate 5: `list x` prints and exits as `list` does | its `rows.txt` line |
+| REQ-02 c8 | Row T-REQ-02-P7 (section 14, delta 3): with a shelf of 20,000 books (about 1.4 MB of `list` output), `list` is started with its stdout piped to the row, which reads the first chunk and closes its end as `head -1` does; the first line read is `1 to read Book number 1`, the exit code is 0, stderr is empty and `shelf.json` is byte-for-byte untouched | its `rows.txt` line |
 | REQ-03 c1 | Row T-REQ-03-… assigned at gate 5: `done 1` on `Dune` prints exactly `done 1 Dune`, exit 0; `list` shows `1 read Dune` | its `rows.txt` line |
 | REQ-03 c2 | Row T-REQ-03-… assigned at gate 5: after `done 1`, book 2 is still `2 to read Emma` in `list` | its `rows.txt` line |
 | REQ-03 c3 | Row T-REQ-03-… assigned at gate 5: `done 1` on an already read book prints `done 1 Dune`, exit 0; `list` still shows it read | its `rows.txt` line |
@@ -272,20 +273,24 @@ the two writers shared one temporary file name, which was not guarded; D-2 recor
 
 ## 9. Stories and integration
 
-Two stories, as the user's scope fixes. [scope; PRD section 7]
+Two stories, as the user's scope fixes, then one per increment the founder decides (section 14).
+[scope; PRD section 7; INCREMENT.md section 3]
 
 | Story | Content | Files it owns |
 |---|---|---|
 | 1 | `add` and `list`; the unknown-command path; the store with missing, unreadable, corrupt, unwritable and the write method; the error class; the boundary, its usage text and its exit-code table | Creates all three files: `app/shelf.mjs`, `app/src/shelf.mjs`, `app/src/store.mjs` |
 | 2 | `done` and `drop`, and routing them in the order of checks; the unknown-id kind in the boundary's exit-code table | Edits `app/shelf.mjs` and `app/src/shelf.mjs` only; never `app/src/store.mjs` |
 | 3 | The fix of D-2 (section 14, delta 2): the temporary file's name becomes per-process (TD-20) | Edits `app/src/store.mjs` only; never `app/shelf.mjs` or `app/src/shelf.mjs` |
+| 4 | The fix of D-3 (section 14, delta 3): a closed pipe on stdout ends the command with nothing on stderr and exit 0 (TD-21) | Edits `app/shelf.mjs` only; never `app/src/shelf.mjs` or `app/src/store.mjs` |
 
 Story 2 edits two files story 1 created; the user accepted this create-then-edit sequence as a
 recorded limitation of the disjoint-scope rule (D10), and story 2's scope file names only those two
 files. Story 1's scope file (`eval/stories/1.txt`) lists its three files and story 2's
 (`eval/stories/2.txt`) lists its two. Story 3 is an increment in sequence, after stories 1 and 2
 merged (INCREMENT.md section 3, item 5: the disjoint-scope rule is for stories built in parallel);
-its scope file (`eval/stories/3.txt`) lists `app/src/store.mjs` alone.
+its scope file (`eval/stories/3.txt`) lists `app/src/store.mjs` alone. Story 4 is likewise an
+increment in sequence, after story 3 merged; its scope file (`eval/stories/4.txt`) lists
+`app/shelf.mjs` alone.
 
 Order: story 1, then story 2; story 2 builds on the files story 1 created. Until story 2, `done` and
 `drop` are not routed and fall into the unknown-command path (the usage text already lists all four
@@ -319,6 +324,7 @@ it. Detail (rows per story, `eval/stories/<n>.expect`) belongs to the eval plan.
 | TD-18 | Complexity limit 10 | recorded default (PRACTICES.md names no figure) |
 | TD-19 | Row-gap handling for the permission rows as section 4 says | the user for REQ-08 (Q10); recorded default for REQ-07 and REQ-03 c12 |
 | TD-20 | The temporary file of the write path (TD-8) is named for the writing process, so two commands at once never write to or rename each other's temporary file; its name is `.shelf.json.<pid>.tmp`, with the process id read from `node:process` (an import, not the `process` global the store's lint rule bars) | a per-process name: the founder (D-2, 2026-10-28, ajpasco: "fix now, option (b), a per-process temporary file name"). The exact form `.shelf.json.<pid>.tmp` and the `node:process` import: a default proposed by the packet drafter, not the founder's decision |
+| TD-21 | The boundary listens for `error` on `process.stdout`, installed before `main` runs. A closed pipe (error code `EPIPE`: the reader stopped reading, as `list \| head -1` or `list \| true` does) ends the command with nothing on stderr and the exit code left at 0. Any other failure to write stdout is an unclassified failure under TD-11 (`shelf: unexpected error`, the stack, exit 1). Rules and store are unchanged; no other error kind, message or exit code moves | the behaviour on a closed pipe: the founder (D-3, 2026-10-28, ajpasco: "fix now, the boundary in app/shelf.mjs, stderr empty and exit 0 when stdout closes early"). The mechanism (an `error` listener on stdout) and the line between `EPIPE` and every other write failure: a default proposed by the packet drafter, not the founder's decision |
 
 **Exit codes and messages**, one line per case (stdout is empty in every case but success). The prefix
 `shelf: ` begins every message line. `<…>` is filled by shelf. Usage text, printed in full after the
@@ -335,6 +341,7 @@ usage: shelf <command>
 | Case | Kind | Exit | stderr |
 |---|---|---|---|
 | Success | none | 0 | nothing |
+| Success with stdout closing early (the reader stopped reading; `EPIPE`) | none | 0 | nothing; stdout holds what the reader took (D-3; TD-21, delta 3) |
 | No command word | `usage` | 2 | usage text only |
 | Unknown command word (`frobnicate`, `search`, `rate`) | `usage` | 2 | `shelf: unknown command: <word>`, then usage text |
 | `add` with no title argument | `argument` | 2 | `shelf: add needs a title` |
@@ -424,7 +431,7 @@ command line, one person, own machine, no web app, no server, no database.
 |---|---|
 | Logs | Excluded: shelf writes no log; its output is the command's stdout and stderr. Recorded default, accepted by the user (Q18 item 6, D9); brought back by a requirement for an audit trail. |
 | Request identity | Excluded: no requests. Excluded: recorded default derived from the scope ("not a web app, a server or a database"); brought back by a server or any request. |
-| Errors | In scope: one error class and kind per failure, raised below the boundary and mapped to a message and exit code once at the boundary; the unclassified failure prints its stack once; none is swallowed (section 10). Recorded default. |
+| Errors | In scope: one error class and kind per failure, raised below the boundary and mapped to a message and exit code once at the boundary; the unclassified failure prints its stack once; none is swallowed (section 10). Recorded default. Delta 3 (D-3, the founder): the one failure deliberately not reported is a closed pipe on stdout, which ends the command with nothing on stderr and exit 0 (TD-21); every other write failure on stdout is still reported as unclassified. |
 | Metrics and alerting | Excluded: nothing runs long enough to measure. Excluded: recorded default derived from the scope ("not a web app, a server or a database"); brought back by a long-running process. |
 
 ### Delivery and data
@@ -447,7 +454,7 @@ command line, one person, own machine, no web app, no server, no database.
 | Exit-code contract | In scope: section 10 fixes 0, 1 and 2 per case. PRD clause (section 4 Order of checks; REQ-01 to REQ-09 criteria). |
 | Platform support | In scope: Node 22 on the reader's machine (user, scope); no other operating-system claim is made, and the permission rows assume POSIX permission bits. Open point 2. |
 | Terminal output of control characters in a title | Accepted limitation: nothing refuses or sanitises such a title (the user, D6; section 11). |
-| Output write failure (stdout closed) | Excluded: not handled beyond Node's default; recorded default. |
+| Output write failure (stdout closed) | In scope since delta 3 (D-3): a closed pipe on stdout (`EPIPE`) ends the command with nothing on stderr and exit 0, handled once at the boundary (TD-21). Decided by the founder (D-3, 2026-10-28, ajpasco). Any other failure to write stdout stays an unclassified failure under TD-11: recorded default. Before delta 3 this line read "Excluded: not handled beyond Node's default; recorded default", which D-3 replaced. |
 | Putting `shelf` on the path | Accepted limitation: the reader runs `node app/shelf.mjs <args>` or an alias (the user, D7; section 11). |
 
 ## 13. Conventions
@@ -470,6 +477,7 @@ silent, follow the existing code and introduce no convention of your own.
     ├── report/              rows.txt written by each run; ignored by git
     ├── stories/             <n>.txt (scope file: the files the story may touch), <n>.md (brief), <n>.expect (expected failures), one set per story, each story's set shipped with its packet
     ├── run.sh, runtime      the gate's entry point and the one line `node 22`
+    ├── deferred.txt         the deferred rows, one `<row id> D-<k>` per line (INCREMENT.md section 9), read by run.sh before any row; present since delta 3 (D-4)
     └── …                    the acceptance tests and the TAP-to-rows converter (named by the eval plan)
 ```
 
@@ -524,7 +532,7 @@ The tools it runs are:
 | Layering | ESLint 9.39.1, `eval/conventions/eslint.config.mjs`: `no-restricted-imports` per file. `app/shelf.mjs` may import only `./src/shelf.mjs`; `app/src/shelf.mjs` only `./store.mjs`; `app/src/store.mjs` only `node:` modules. Code in `app/src/shelf.mjs` and `store.mjs` uses no `process` or `console` (`no-restricted-globals`); only `store.mjs` imports `node:fs`; the rules and boundary never do. The module that decides never performs the I/O, and the module that performs never decides. Decider: the three files and the one-way direction, the user (D2); the specific ESLint rules above, recorded default. |
 | Layout | The tree above; the layer-per-file rule is held by the layout check and the import rules above. One concern per module; `app/` never gains a utilities file because D2 fixes three. Plain functions, no classes except the one error class. A helper that knows a book belongs in the rules. |
 | Limits on length and complexity | ESLint rules `max-lines` (300), `max-lines-per-function` (50) and `complexity` (10), in `eval/conventions/eslint.config.mjs`. The enforcement by these three ESLint rules is the user's (D3); the figures 300, 50 and 10 are recorded defaults (TD-18, and PRACTICES.md's recommendations for 300 and 50). |
-| Errors | One class `ShelfError` with a `kind` (`usage`, `argument`, `unknown-id`, `unreadable`, `corrupt`, `unwritable`), thrown below the boundary and mapped once at the boundary to a message and exit code; no empty `catch`, no swallowed error, enforced by `no-empty` from `@eslint/js` recommended and `no-unsafe-finally`; an error is never turned into a default value except the deliberate `ENOENT` means empty shelf. |
+| Errors | One class `ShelfError` with a `kind` (`usage`, `argument`, `unknown-id`, `unreadable`, `corrupt`, `unwritable`), thrown below the boundary and mapped once at the boundary to a message and exit code; no empty `catch`, no swallowed error, enforced by `no-empty` from `@eslint/js` recommended and `no-unsafe-finally`; an error is never turned into a default value except the deliberate `ENOENT` means empty shelf and, since delta 3, the deliberate `EPIPE` on stdout means the reader stopped reading (TD-21, the founder's D-3). |
 | Logging | Declined in one sentence: shelf writes no log, only its command output and its error message (section 12). Recorded default, accepted by the user (Q18 item 6, D9). |
 | Configuration | Declined in one sentence: there is no setting to load (section 6); `no-restricted-globals` already keeps `process` out of the rules and store, and the store reads no environment. Recorded default, accepted by the user (Q18 item 6, D9). |
 | Dependencies | Declined in the usual sense and made stricter: none exist (user, scope). `no-restricted-imports` with a regular expression refuses any import that is neither `node:` nor relative; the layout check refuses a `package.json`. A new dependency would need a blueprint change. |
@@ -602,6 +610,53 @@ as REQ-08 c5 (PRD section 10, amendment 2).
   no tool. Section 12 changes one line, Reliability "Shared objects", to name delta 2; the decision
   there stands.
 
+### Delta 3: defect D-3, a reader that closes the pipe early (2026-10-29)
+
+The founder's decision, in their words (2026-10-28, login ajpasco): "D-3, a closed pipe: with a
+long list, 'shelf list | head -1' or 'shelf list | true' prints Node's unhandled 'error' event
+(EPIPE) stack to stderr; fix now, the boundary in app/shelf.mjs, stderr empty and exit 0 when stdout
+closes early." The record is `docs/defects/D-3.md`; the PRD carries the decision as REQ-02 c8 and
+the definition "Stdout closes early" (PRD section 10, amendment 3). On 2026-10-29 the founder had
+the same packet carry D-4's record, row and `eval/deferred.txt` line, D-1's record with no row, and
+"the one-phrase fix to blueprint section 9's 'Two stories'" (their words, quoted in full in PRD
+amendment 3).
+
+- **Layer.** Boundary (`app/shelf.mjs`), the only file story 4 edits (section 9): a failed write to
+  stdout is handled there (TD-21). Rules and store: unchanged.
+- **Pinned contract.** Section 10's message table gains one line, "Success with stdout closing
+  early": exit 0, nothing on stderr, stdout holding what the reader took. No existing line of the
+  table, no exit code, the usage text and no success line changes. Section 2's boundary row names
+  the new duty. Section 12, "Output write failure (stdout closed)", moves from excluded to in scope,
+  and Observability "Errors" names the one failure deliberately not reported; section 13's Errors
+  convention names `EPIPE` on stdout as the second deliberate exception beside `ENOENT`.
+- **Verification register.** One row added for the one new criterion, REQ-02 c8: T-REQ-02-P7, the
+  register row in section 4 (82 rows). Its mechanism is `list` on a 20,000-book shelf with its
+  stdout piped to the row, which reads the first chunk and closes its end as `head -1` does,
+  observed through the first line read, the exit code, stderr and the file's bytes; its evidence is
+  its `rows.txt` line. No existing register row changes.
+- **Technical choices the build needs, and who decided.** That a closed pipe ends the command with
+  nothing on stderr and exit 0, and that the fix is in the boundary: the founder (D-3). The
+  mechanism, an `error` listener on `process.stdout` installed before `main` runs, and the line
+  between `EPIPE` (the closed pipe) and every other failure to write stdout, which stays
+  unclassified under TD-11: a default proposed by the packet drafter (TD-21), open to the founder's
+  change. TD-9 (`process.exitCode`, never `process.exit()`) and TD-11 stand.
+- **Conventions and production readiness.** No convention is needed that section 13 does not
+  state: the boundary still imports only `./src/shelf.mjs`, and `process` was already allowed
+  there; the conventions step gains and changes no tool. Section 13's Errors row and layout tree
+  change as above (the tree gains `eval/deferred.txt`, which D-4's deferral brings into being).
+  Section 12 changes the two lines named above.
+- **Carried with it, changing no decision of this blueprint.** D-4 (`docs/defects/D-4.md`,
+  deferred by the founder, "reachable only by a hand edit of shelf.json"): its row T-REQ-01-N9 is
+  in `eval/tests/defects.test.mjs` and listed in `eval/deferred.txt`; the behaviour at the id
+  ceiling is undecided, so section 7's `nextId` ("integer, at least 1", checked as a safe integer)
+  and TD-7 stand as they are, and the register gains no row for it (the row traces to REQ-01 c1
+  and c2 and the PRD's Corrupt definition, whose register rows exist). D-1 (`docs/defects/D-1.md`,
+  deferred, no row): its trigger, a directory named `.shelf.json.tmp`, is unreachable since TD-20
+  named the temporary file for the writing process; section 7's write method stands. Section 9's
+  opening sentence gains the phrase "then one per increment the founder decides (section 14)": the
+  founder asked for a one-phrase fix and gave no wording, so the wording is a default proposed by
+  the packet drafter.
+
 ## Change log
 
 - **Revision 1:** first draft of the blueprint of PRD revision 5 and mockup revision 4.
@@ -648,3 +703,10 @@ as REQ-08 c5 (PRD section 10, amendment 2).
   2026-10-28; the header names PRD revision 10. TD-20 added (per-process temporary file name);
   section 7's write method, section 8, section 9 (story 3) and section 12's "Shared objects" line
   changed to match; TD-17 carries a note. The register gains one row, REQ-08 c5 (81 rows).
+- **Revision 12:** increment delta 3 (section 14): defect D-3, from the founder's decisions of
+  2026-10-28 and 2026-10-29; the header names PRD revision 11. TD-21 added (a closed pipe on stdout
+  handled at the boundary); section 2's boundary row, section 9 (its opening phrase, a default
+  proposed by the packet drafter at the founder's request, and story 4), section 10's message
+  table, section 12's "Output write failure (stdout closed)" and "Errors" lines, and section 13's
+  Errors row and layout tree (`eval/deferred.txt`) changed to match. The register gains one row,
+  REQ-02 c8 (82 rows). D-4 and D-1, carried in the same packet, change no decision.

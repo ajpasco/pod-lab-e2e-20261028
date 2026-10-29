@@ -111,6 +111,8 @@ const STORY_IDS = {
     'T-REQ-09-N8',
   ],
   'story-3.test.mjs': ['T-REQ-08-N4'],
+  'story-4.test.mjs': ['T-REQ-02-P7'],
+  'defects.test.mjs': ['T-REQ-01-N9'],
 };
 
 function readIfExists(file) {
