@@ -316,7 +316,7 @@ Permissions are restored before bytes are compared.
 | T-REQ-08-N1 | Given an unwritable shelf (both variants), when the reader runs `add Ulysses`, then the bytes of `shelf.json` and the directory listing equal what was staged: nothing changed on disk, no temporary file left. (REQ-08 c4, `add`) | integration | 1 | passes: the assertion is only that disk is unchanged (root: `cannot stage: running as root`) |
 | T-REQ-08-N2 | As T-REQ-08-N1 for `done 1`. (REQ-08 c4, `done`) | integration | 2 | passes: unknown command changes nothing (root: `cannot stage: running as root`) |
 | T-REQ-08-N3 | As T-REQ-08-N1 for `drop 1`. (REQ-08 c4, `drop`) | integration | 2 | passes: unknown command changes nothing (root: `cannot stage: running as root`) |
-| T-REQ-08-N4 | Two commands at once; no `chmod`, so it runs as root too. Given a shelf of {1 to read Dune; 2 to read Emma}, when the reader starts `done 1` and `done 2` in the same moment (two processes), forty times over with the shelf restaged before each trial, then in every trial a `done` that was refused (non-zero exit) printed nothing on stdout and `list` afterwards still shows its book `to read`, and when one or both exited 0 `list` shows at least one of their books `read`. A trial where both exit 0 and one change is lost asserts nothing more (blueprint section 8, TD-17). (REQ-08 c5; D-2; added by section 12, delta 2) | integration | 3 | fails, against main with story 2 merged (`a9c2f92`), where both processes write one shared temporary file: in some trials the `done` that exited 1 with the cannot-write message has its book `read` in `list` (`trial <k>, done <id> exited 1 (…ENOENT…): yet list shows "<id> read <title>" where "<id> to read <title>" is expected`) |
+| T-REQ-08-N4 | Two commands at once; no `chmod`, so it runs as root too. Given a large shelf, {1 to read Dune; 2 to read Emma} followed by 400 more to-read books whose titles are 40,000 characters long (a file of about 16 MB, so that each command's write of it takes milliseconds and two writes started in the same moment overlap on a slow machine too), when the reader starts `done 1` and `done 2` in the same moment (two processes), forty times over with the shelf restaged before each trial, then in every trial `list` afterwards exits 0 (the shelf is whole), a `done` that was refused (non-zero exit) printed nothing on stdout and `list` still shows its book `to read`, and when one or both exited 0 `list` shows at least one of their books `read`. A trial where both exit 0 and one change is lost asserts nothing more (blueprint section 8, TD-17). (REQ-08 c5; D-2; added by section 12, delta 2) | integration | 3 | fails, against main with story 2 merged (`a9c2f92`), where both processes write one shared temporary file: in most trials the `done` that exited 1 with the cannot-write message has its book `read` in `list` (`trial <k>, done <id> exited 1 (…ENOENT…): yet list shows "<id> read <title>" where "<id> to read <title>" is expected`) |
 
 ### REQ-09: Refuse a corrupt shelf file
 
@@ -673,7 +673,8 @@ testable, because Q14 was narrowed to allow a row to check that the usage on std
   row, state, count or `.expect` list changed.
 - **Revision 7.** Increment delta 2 (section 12): defect D-2, from the founder's decision of
   2026-10-28. One row added, T-REQ-08-N4, for the new criterion REQ-08 c5, as code in
-  `eval/tests/story-3.test.mjs`; story 3 added to sections 2, 6 and 7 (99 rows); the coverage map
+  `eval/tests/story-3.test.mjs`, staged on a large shelf so that its race shows on GitHub's runner
+  as well as on a laptop (section 12, delta 2); story 3 added to sections 2, 6 and 7 (99 rows); the coverage map
   of section 5 gains REQ-08 c5; section 8's blueprint-decisions gap amended. The header names PRD
   revision 10 and blueprint revision 11. No existing row, state or `.expect` list changed.
 
@@ -732,25 +733,40 @@ REQ-08 c5 (PRD section 10, amendment 2); the blueprint's delta is section 14, de
   99 rows.
 - **Rows as code.** T-REQ-08-N4 is written in `eval/tests/story-3.test.mjs` from its Given/When/Then:
   two `node app/shelf.mjs done` processes started in the same tick in a fresh temporary directory
-  holding a shelf of two to-read books, forty trials with the shelf restaged before each, observing
-  only each process's exit code, stdout and stderr and the lines `list` prints afterwards, as
-  section 2 says; no row imports `app/`. `eval/tap-to-rows.mjs` gains the entry
+  holding the large shelf of section 4's row (the two books the commands act on, then 400 to-read
+  books with 40,000-character titles, about 16 MB), forty trials with the shelf restaged before
+  each, observing only each process's exit code, stdout and stderr and the lines `list` prints
+  afterwards, as section 2 says; no row imports `app/`. The row starts its processes with its own
+  asynchronous spawn, so that two can start in the same tick and so that `list` of a 16 MB shelf is
+  read whole (the harness's synchronous runner has Node's default 1 MB output limit); it still
+  observes nothing but stdout, stderr and the exit code. `eval/tap-to-rows.mjs` gains the entry
   `'story-3.test.mjs': ['T-REQ-08-N4']`, keyed on that file's presence as the other two are, so
   the row is written `fail T-REQ-08-N4 did not run` if it does not run. `eval/tests/harness.mjs`
   is unchanged.
 - **Expected state against the current main**, story 2 merged (main at `a9c2f92`), where both
-  processes write and rename the one shared temporary file `.shelf.json.tmp`: fails. In some of the
-  forty trials the first rename installs the other process's document and the second rename finds
-  no temporary file, so one `done` exits 1 with the cannot-write message while its book is `read`
-  on disk (the QA pass saw 3 to 6 such trials in 10). The row's reason names the trial, the command,
-  its exit code and stderr, and the `list` line found where `<id> to read <title>` was expected.
-  With the fix of TD-20, no trial has a refused `done`, both exit 0 in every trial and the last
-  writer's book is `read`, so the row passes. The packet ships `eval/stories/3.expect` with the one
-  line `fail T-REQ-08-N4`.
-- **Why forty trials.** The failure is a race; one trial can come out clean. Forty trials make a
-  clean run against the unfixed store practically impossible at the rate the QA pass measured, and
-  they keep the row's running time to a few seconds (120 short processes). A default proposed by
-  the packet drafter (the QA draft had twenty).
+  processes write and rename the one shared temporary file `.shelf.json.tmp`: fails. In most of the
+  forty trials the two writes overlap: the second process's write truncates and refills the file
+  the first has written, the first rename installs the second process's document and the second
+  rename finds no temporary file, so one `done` exits 1 with the cannot-write message while its
+  book is `read` on disk (the QA pass saw 3 to 6 such trials in 10 with a two-book shelf on a
+  laptop). The row's reason names the trial, the command, its exit code and stderr, and the `list`
+  line found where `<id> to read <title>` was expected. Should the two writes instead leave the
+  file torn, `list` afterwards is refused and the row fails on that, since no exit-0 line describes
+  a shelf that cannot be read. With the fix of TD-20, no trial has a refused `done`, both exit 0 in
+  every trial, `list` prints a whole shelf and the last writer's book is `read`, so the row passes.
+  The packet ships `eval/stories/3.expect` with the one line `fail T-REQ-08-N4`.
+- **Why a large shelf, and forty trials.** The failure is a race between the two processes' writes
+  of the one temporary file; its window is the time one process takes to write that file, which
+  for a two-book shelf is microseconds. The first draft of this row staged two books alone: it
+  failed on a laptop in its second trial, and passed on GitHub's runner (pull request #5, preview
+  run 40812255053), where the two processes' writes never overlapped in forty trials, so the row
+  asserted nothing against main there. With a 16 MB file the write takes milliseconds, longer than
+  the usual difference between the two processes' starts, so the writes overlap in most trials
+  wherever the row runs; forty trials then make a clean run against the unfixed store practically
+  impossible, and keep the row's running time to tens of seconds at most (120 processes, each
+  reading and writing 16 MB). The size (400 filler books of 40,000 characters) and the trial count
+  are a default proposed by the packet drafter, not measured on the runner (the QA draft had twenty
+  trials and two books).
 - **Packet files shipped:** `eval/stories/3.txt` (`app/src/store.mjs`), `eval/stories/3.md` (the
   brief) and `eval/stories/3.expect` (one line).
 - **Restraint.** No surface gains or loses a control: the four commands, their arguments, their

@@ -136,7 +136,7 @@ paragraph after the table and Open points 2.
 | REQ-08 c2 | **[non-root]** Row T-REQ-08-… assigned at gate 5: same staging, `done 1` exits 1, stderr non-empty, stdout empty. Same precondition and gap handling | its `rows.txt` line; if root, the recorded gap (Q10) |
 | REQ-08 c3 | **[non-root]** Row T-REQ-08-… assigned at gate 5: same staging, `drop 1` exits 1, stderr non-empty, stdout empty. Same precondition and gap handling | its `rows.txt` line; if root, the recorded gap (Q10) |
 | REQ-08 c4 | **[non-root]** Row T-REQ-08-… assigned at gate 5: after each of the three commands the file's bytes and the directory listing equal what was staged, so no partial or temporary file is left. Same precondition and gap handling | its `rows.txt` line; if root, the recorded gap (Q10) |
-| REQ-08 c5 | Row T-REQ-08-N4 (section 14, delta 2; no `chmod`, so it runs as root too): with a shelf of {1 to read Dune; 2 to read Emma}, `done 1` and `done 2` are started in the same moment as two processes, forty times over, restaging between trials; in every trial a `done` that exited non-zero printed nothing on stdout and `list` afterwards still shows its book `to read`, and when one or both exited 0 `list` shows at least one of their books `read` | its `rows.txt` line |
+| REQ-08 c5 | Row T-REQ-08-N4 (section 14, delta 2; no `chmod`, so it runs as root too): with a large shelf, {1 to read Dune; 2 to read Emma} followed by 400 to-read books with 40,000-character titles (about 16 MB, so that the two writes take long enough to overlap on a slow machine too), `done 1` and `done 2` are started in the same moment as two processes, forty times over, restaging between trials; in every trial `list` afterwards exits 0, a `done` that exited non-zero printed nothing on stdout and `list` still shows its book `to read`, and when one or both exited 0 `list` shows at least one of their books `read` | its `rows.txt` line |
 | REQ-09 c1 | Row T-REQ-09-… assigned at gate 5: with a file that is not valid JSON, `list` exits 1, stderr non-empty, stdout empty | its `rows.txt` line |
 | REQ-09 c2 | Row T-REQ-09-… assigned at gate 5: same file, `add Dune` exits 1, stderr non-empty, stdout empty | its `rows.txt` line |
 | REQ-09 c3 | Row T-REQ-09-… assigned at gate 5: same file, `done 1` exits 1, stderr non-empty, stdout empty | its `rows.txt` line |
@@ -589,8 +589,9 @@ as REQ-08 c5 (PRD section 10, amendment 2).
   wins".
 - **Verification register.** One row added for the one new criterion, REQ-08 c5: T-REQ-08-N4,
   the register row in section 4 (81 rows). Its mechanism is two `done` processes started in the
-  same moment, forty trials, observed through the exit codes, stdout and `list`; its evidence is
-  its `rows.txt` line. No existing register row changes.
+  same moment on a large shelf (about 16 MB, so that their writes overlap on GitHub's runner as
+  well as on a laptop), forty trials, observed through the exit codes, stdout and `list`; its
+  evidence is its `rows.txt` line. No existing register row changes.
 - **Technical choices the build needs, and who decided.** A per-process temporary file name:
   the founder (D-2, option (b)). The exact form `.shelf.json.<pid>.tmp`, and reading the id from
   `node:process` as an import so the store's `no-restricted-globals` rule on `process` is kept: a
