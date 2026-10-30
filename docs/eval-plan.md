@@ -1,8 +1,8 @@
 # Eval plan and stories: shelf
 
-Revision 8.
+Revision 9.
 
-Written against PRD revision 11 and blueprint revision 12 (revisions after PRD 5 and blueprint 4 changed no requirement, criterion or register row until PRD 10, which added REQ-08 c5, and blueprint 11, which added its register row; PRD 11 added REQ-02 c8 and blueprint 12 its register row; PRD 9 and blueprint 10 record increment delta 1, story 2, PRD 10 and blueprint 11 record increment delta 2, defect D-2, and PRD 11 and blueprint 12 record increment delta 3, defect D-3 with D-4 and D-1 carried, all three carried here as section 12). Every `REQ-nn` below is an id
+Written against PRD revision 12 and blueprint revision 13 (revisions after PRD 5 and blueprint 4 changed no requirement, criterion or register row until PRD 10, which added REQ-08 c5, and blueprint 11, which added its register row; PRD 11 added REQ-02 c8 and blueprint 12 its register row; PRD 12 and blueprint 13 added no criterion and no register row; PRD 9 and blueprint 10 record increment delta 1, story 2, PRD 10 and blueprint 11 record increment delta 2, defect D-2, PRD 11 and blueprint 12 record increment delta 3, defect D-3 with D-4 and D-1 carried, and PRD 12 and blueprint 13 record increment delta 4, the deferrals of D-5 and D-6 with D-1's wording corrected, all four carried here as section 12). Every `REQ-nn` below is an id
 the PRD gave; this plan mints none. `Qn` and `Dn` cite `docs/PREPARATION-STATE.md`; `D-<n>` with a
 hyphen is a defect record, `docs/defects/D-<n>.md`.
 
@@ -115,7 +115,8 @@ directory listing, permission staging and restoring) is shared and is not a test
 `eval/tests/story-1.test.mjs`, `eval/tests/story-2.test.mjs`, `eval/tests/story-3.test.mjs` and
 `eval/tests/story-4.test.mjs`, one file per story, so a story's rows stay out of main until its
 packet opens; and in `eval/tests/defects.test.mjs`, which holds the rows that reproduce defects the
-founder deferred (section 12, delta 3: T-REQ-01-N9 for D-4), each listed in `eval/deferred.txt`
+founder deferred (section 12, delta 3: T-REQ-01-N9 for D-4; delta 4: T-REQ-08-N5 for D-5 and
+T-REQ-08-N6 for D-6), each listed in `eval/deferred.txt`
 beside its defect id until the founder puts the defect in, when the packet that fixes it removes the
 line and the row stays where it is. `eval/stories/` holds each
 story's packet files: the scope file `<n>.txt`, the brief `<n>.md` and the expected failures
@@ -176,8 +177,9 @@ Story 1 rows are stated against the state "empty `app/`": `node app/shelf.mjs` d
 child exits 1, Node's `Cannot find module` is on stderr and stdout is empty. Story 2 rows are stated
 against "main with story 1 merged", the moment story 2's packet opens: `done` and `drop` are then
 unknown commands (exit 2, usage on stderr, stdout empty, file untouched). Both assume a non-root runner
-(section 8, Gaps). The story-3 row is stated against main with story 2 merged (`a9c2f92`), and the
-story-4 row and the deferred row T-REQ-01-N9 against main with story 3 merged (`d01f4a9`).
+(section 8, Gaps). The story-3 row is stated against main with story 2 merged (`a9c2f92`), the
+story-4 row and the deferred row T-REQ-01-N9 against main with story 3 merged (`d01f4a9`), and the
+deferred rows T-REQ-08-N5 and T-REQ-08-N6 against main with story 4 merged (`6ba654d`).
 
 The row is `fails` unless it says `passes`. A `passes` row asserts only what already holds in that state;
 the reason is given in the row.
@@ -324,6 +326,8 @@ Permissions are restored before bytes are compared.
 | T-REQ-08-N2 | As T-REQ-08-N1 for `done 1`. (REQ-08 c4, `done`) | integration | 2 | passes: unknown command changes nothing (root: `cannot stage: running as root`) |
 | T-REQ-08-N3 | As T-REQ-08-N1 for `drop 1`. (REQ-08 c4, `drop`) | integration | 2 | passes: unknown command changes nothing (root: `cannot stage: running as root`) |
 | T-REQ-08-N4 | Two commands at once; no `chmod`, so it runs as root too. Given a large shelf, {1 to read Dune; 2 to read Emma} followed by 400 more to-read books whose titles are 40,000 characters long (a file of about 16 MB, so that each command's write of it takes milliseconds and two writes started in the same moment overlap on a slow machine too), when the reader starts `done 1` and `done 2` in the same moment (two processes), forty times over with the shelf restaged before each trial, then in every trial `list` afterwards exits 0 (the shelf is whole), a `done` that was refused (non-zero exit) printed nothing on stdout and `list` still shows its book `to read`, and when one or both exited 0 `list` shows at least one of their books `read`. A trial where both exit 0 and one change is lost asserts nothing more (blueprint section 8, TD-17). (REQ-08 c5; D-2; added by section 12, delta 2) | integration | 3 | fails, against main with story 2 merged (`a9c2f92`), where both processes write one shared temporary file: in most trials the `done` that exited 1 with the cannot-write message has its book `read` in `list` (`trial <k>, done <id> exited 1 (…ENOENT…): yet list shows "<id> read <title>" where "<id> to read <title>" is expected`) |
+| T-REQ-08-N5 | Deferred (D-5; `eval/deferred.txt`). A command killed while it writes; no `chmod`, so it runs as root too. Given a large shelf, {1 to read Dune} followed by 1000 to-read books whose titles are 40,000 characters long (about 40 MB, so that the write takes long enough to be interrupted), when the reader starts `done 1` and ends it with SIGTERM the moment the command's temporary file appears beside `shelf.json` (the row watches for the name blueprint section 7 gives it, TD-20, which is the only way to hit the window from outside the process; a trial in which the command finished before the file was seen is inconclusive and is retried, up to five trials), then a later `done 1` exits 0 and prints `done 1 Dune` (the shelf the kill left behind is whole and still holds the book), and the directory afterwards holds exactly one entry, `shelf.json`: nothing of the interrupted command survives, as T-REQ-01-N6 and T-REQ-08-N1 to N3 assert after a successful or a refused write. The row chooses no behaviour: it passes whether a fix lets a signalled command finish whole (D-5's option c) or removes the stray on the next successful write (option b), and under option (a) it stays deferred. (REQ-08 c4, what a write that did not complete leaves on disk; REQ-03 c1, the later `done 1`; blueprint section 12 Shutdown; D-5; added by section 12, delta 4) | integration | none yet: deferred by the founder (D-5); the story that fixes D-5, when the founder puts it in | fails, against main with story 4 merged (`6ba654d`): the kill leaves `.shelf.json.<pid>.tmp` beside the whole `shelf.json`, the later `done 1` exits 0 and removes only its own temporary file (`trial 1: done 1 ended with exit null (signal SIGTERM), and after a later successful done 1 the directory holds [".shelf.json.<pid>.tmp","shelf.json"] where only shelf.json is expected`); reported `deferred T-REQ-08-N5 D-5 <reason>`, in no `.expect` |
+| T-REQ-08-N6 | Deferred (D-6; `eval/deferred.txt`). Given two directories, one holding a shelf of {1 to read Dune} and the other holding `shelf.json` as a symbolic link to that file, when the reader runs `done 1` in the directory of the link, then either the command exited 0 and `list` in the linked file's directory exits 0 and prints exactly `1 read Dune` (the change the command reported is on the shelf the reader linked to), or the command was refused (non-zero exit: nothing on stdout, a message on stderr, the linked file untouched); and in either case `shelf.json` in the link's directory is still a symbolic link. The row chooses no behaviour: it passes whether a fix follows the link (D-6's option a) or refuses a linked `shelf.json` (option b), and under option (c) it stays deferred. (REQ-03 c1, read through the link; PRD section 2, the shelf is `shelf.json` in the current directory; PRD section 4 Failed command; D-6; added by section 12, delta 4) | integration | none yet: deferred by the founder (D-6); the story that fixes D-6, when the founder puts it in | fails, against main with story 4 merged (`6ba654d`): `done 1` exits 0 and prints `done 1 Dune`, the rename replaces the link with a regular file and the linked file is unchanged (`done 1 exited 0 printing "done 1 Dune", yet the linked file lists "1 to read Dune\n"`); reported `deferred T-REQ-08-N6 D-6 <reason>`, in no `.expect` |
 
 ### REQ-09: Refuse a corrupt shelf file
 
@@ -360,10 +364,15 @@ All 82 criteria of the PRD and all 82 register rows of blueprint section 4 (same
 (REQ-08 c5 and its row were added by section 12, delta 2; REQ-02 c8 and its row by section 12,
 delta 3).
 The restraint rows T-REQ-01-N6, T-REQ-01-N7, T-REQ-01-N8 and T-REQ-05-N3 have no register row; they
-trace to the requirement named and to the PRD's non-goals. The deferred row T-REQ-01-N9 (D-4) has no
-register row of its own: it traces to REQ-01 c1 and c2 and to the PRD's Corrupt shelf file
-definition, whose rows T-REQ-01-P1 and P2 and the REQ-09 rows exist; it states no behaviour at the
-id ceiling, since the founder has decided none.
+trace to the requirement named and to the PRD's non-goals. The deferred rows have no register row of
+their own and state no behaviour the founder has not decided. T-REQ-01-N9 (D-4) traces to REQ-01 c1
+and c2 and to the PRD's Corrupt shelf file definition, whose rows T-REQ-01-P1 and P2 and the REQ-09
+rows exist. T-REQ-08-N5 (D-5) traces to REQ-08 c4 (what a write that did not complete leaves on
+disk; rows T-REQ-08-N1 to N3) and REQ-03 c1 (the later `done 1`; row T-REQ-03-P1), and to blueprint
+section 12's Shutdown line, which has no criterion. T-REQ-08-N6 (D-6) traces to REQ-03 c1 (row
+T-REQ-03-P1) read through the link, to PRD section 2 and to the PRD's Failed command definition.
+Both are under REQ-08 because each stages a write that does not reach the shelf as the reader sees
+it, the requirement whose refusal rows already assert what such a write leaves on disk.
 
 | Criterion | Row id(s) | Criterion | Row id(s) |
 |---|---|---|---|
@@ -418,10 +427,11 @@ id ceiling, since the founder has decided none.
 | 3 | Edits to `app/src/store.mjs` only; never `app/shelf.mjs` or `app/src/shelf.mjs` (section 12, delta 2) | Stories 1 and 2, both merged: it edits the file story 1 created, and its row uses story 2's `done` and story 1's `list` | The 1 story-3 row below: T-REQ-08-N4 |
 | 4 | Edits to `app/shelf.mjs` only; never `app/src/shelf.mjs` or `app/src/store.mjs` (section 12, delta 3) | Stories 1 to 3, all merged: it edits the file story 1 created, and its row uses story 1's `list` | The 1 story-4 row below: T-REQ-02-P7 |
 
-Every row has exactly one owner story, with one exception this plan records rather than hides: the
-deferred row T-REQ-01-N9 (D-4, section 12, delta 3) is owned by no story yet, because the founder
-deferred the defect and chose no behaviour; its owner is the story that fixes D-4, when the founder
-puts it in, and until then `eval/deferred.txt` keeps it out of the verdict. No story-1 row uses `done` or `drop`. The scope is not disjoint
+Every row has exactly one owner story, with three exceptions this plan records rather than hides: the
+deferred rows T-REQ-01-N9 (D-4, section 12, delta 3), T-REQ-08-N5 (D-5) and T-REQ-08-N6 (D-6,
+both section 12, delta 4) are owned by no story yet, because the founder deferred each defect and
+chose no behaviour; each one's owner is the story that fixes its defect, when the founder puts it
+in, and until then `eval/deferred.txt` keeps it out of the verdict. No story-1 row uses `done` or `drop`. The scope is not disjoint
 in the strict sense of the rubric: stories 1 and 2 both name `app/shelf.mjs` and `app/src/shelf.mjs`,
 story 1 to create them and story 2 to edit them afterwards. This is the blueprint's section 9 design
 (the store is complete in story 1 so that story 2 never edits it) and the user's stated scope. The user
@@ -441,7 +451,9 @@ story 2's packet after story 1 merges (section 12, delta 1). Story 3: `eval/stor
 D-2 packet after story 2 merges (section 12, delta 2). Story 4: `eval/stories/4.txt` (listing
 `app/shelf.mjs`), `eval/stories/4.md` and `eval/stories/4.expect` (one line), shipped with the D-3
 packet after story 3 merges (section 12, delta 3), which also ships `eval/deferred.txt` with the one
-line `T-REQ-01-N9 D-4`.
+line `T-REQ-01-N9 D-4`. The deferral packet of D-5 and D-6 (section 12, delta 4) has no story and
+ships no file under `eval/stories/`: it adds the lines `T-REQ-08-N5 D-5` and `T-REQ-08-N6 D-6` to
+`eval/deferred.txt`.
 
 **Story 1 rows (48).**
 T-REQ-01-P1, P2, P3, P4, P5, P6, P8, P10, P11; T-REQ-01-N1 to N8;
@@ -557,10 +569,11 @@ fail T-REQ-02-P7
 
 Story 4 has no `passes` row and retires no row, so there is no `eval/stories/4.retire`.
 
-**Deferred rows (1), owned by no story yet.** T-REQ-01-N9 (D-4), in `eval/tests/defects.test.mjs`,
-listed in `eval/deferred.txt`. It fails against main with story 3 merged and is reported
-`deferred T-REQ-01-N9 D-4 <reason>`, outside the verdict; it is in no `.expect`, since a listed row
-does not fail the run (INCREMENT.md section 9). Should it pass one day, the gate, the preview and the
+**Deferred rows (3), owned by no story yet.** T-REQ-01-N9 (D-4), T-REQ-08-N5 (D-5) and T-REQ-08-N6
+(D-6), in `eval/tests/defects.test.mjs`, listed in `eval/deferred.txt`. T-REQ-01-N9 fails against
+main with story 3 merged, the other two against main with story 4 merged, and each is reported
+`deferred <id> D-<k> <reason>`, outside the verdict; none is in any `.expect`, since a listed row
+does not fail the run (INCREMENT.md section 9). Should one pass one day, the gate, the preview and the
 rehearsal note that the list names a passing row: the defect may be fixed.
 
 **On a runner that is root.** Both files assume a non-root runner. As root, the 15 permission rows fail
@@ -574,8 +587,9 @@ failures until the founder defers them (section 8).
 Rows per requirement. "Fail S1" is the number of that requirement's story-1 rows expected to fail
 against the empty `app/`; "Fail S2" the story-2 rows expected to fail against story-1 main; "Fail S3"
 the story-3 rows expected to fail against story-2 main (section 12, delta 2); "Fail S4" the story-4
-rows expected to fail against story-3 main (section 12, delta 3). The deferred row T-REQ-01-N9
-(D-4) fails against story-3 main too but is reported `deferred`, so it is in no Fail column.
+rows expected to fail against story-3 main (section 12, delta 3). The deferred rows T-REQ-01-N9
+(D-4), T-REQ-08-N5 (D-5) and T-REQ-08-N6 (D-6) fail against story-3 and story-4 main too but are
+reported `deferred`, so they are in no Fail column.
 
 | Requirement | P | N | Integration | Restraint | Total | Fail S1 | Fail S2 | Fail S3 | Fail S4 |
 |---|---|---|---|---|---|---|---|---|---|
@@ -586,19 +600,19 @@ rows expected to fail against story-3 main (section 12, delta 3). The deferred r
 | REQ-05 | 3 | 3 | 5 | 1 | 6 | 5 | 0 | 0 | 0 |
 | REQ-06 | 1 | 6 | 7 | 0 | 7 | 3 | 2 | 0 | 0 |
 | REQ-07 | 4 | 4 | 8 | 0 | 8 | 0 | 2 | 0 | 0 |
-| REQ-08 | 3 | 4 | 7 | 0 | 7 | 0 | 2 | 1 | 0 |
+| REQ-08 | 3 | 6 | 9 | 0 | 9 | 0 | 2 | 1 | 0 |
 | REQ-09 | 8 | 8 | 16 | 0 | 16 | 0 | 4 | 0 | 0 |
-| **Total** | **47** | **54** | **97** | **4** | **101** | **31** | **29** | **1** | **1** |
+| **Total** | **47** | **56** | **99** | **4** | **103** | **31** | **29** | **1** | **1** |
 
-Overall: 101 rows (47 positive, 54 negative); 97 `integration`, 4 `restraint`, no `unit`, `e2e`,
+Overall: 103 rows (47 positive, 56 negative); 99 `integration`, 4 `restraint`, no `unit`, `e2e`,
 `production` or `review`. Per story: story 1 has 48 rows (31 fail, 17 pass); story 2 has 50 rows (29
-fail, 21 pass); story 3 has 1 row (1 fail, 0 pass); story 4 has 1 row (1 fail, 0 pass); 1 row,
-T-REQ-01-N9, is owned by no story yet and deferred (D-4); 62 rows fail before their story and 38
-pass. The 101 rows are the 82 criteria (one row each), plus 11 rows from the four splits (REQ-07 c5
-into 4 rows, REQ-08 c4 into 3, REQ-09 c9 and c10 into 4 each: 15 rows for 4 criteria), plus 3 rows
-for the real-command forms (T-REQ-01-P7, P9, T-REQ-02-P3), plus 4 restraint rows, plus the 1
-deferred row of D-4, which traces to criteria that already have their rows: 82 + 11 + 3 + 4 + 1 =
-101.
+fail, 21 pass); story 3 has 1 row (1 fail, 0 pass); story 4 has 1 row (1 fail, 0 pass); 3 rows,
+T-REQ-01-N9, T-REQ-08-N5 and T-REQ-08-N6, are owned by no story yet and deferred (D-4, D-5, D-6);
+62 rows fail before their story and 38 pass. The 103 rows are the 82 criteria (one row each), plus
+11 rows from the four splits (REQ-07 c5 into 4 rows, REQ-08 c4 into 3, REQ-09 c9 and c10 into 4
+each: 15 rows for 4 criteria), plus 3 rows for the real-command forms (T-REQ-01-P7, P9,
+T-REQ-02-P3), plus 4 restraint rows, plus the 3 deferred rows of D-4, D-5 and D-6, which trace to
+criteria that already have their rows: 82 + 11 + 3 + 4 + 3 = 103.
 
 ## 8. Gaps
 
@@ -651,7 +665,27 @@ deferred row of D-4, which traces to criteria that already have their rows: 82 +
   states one and T-REQ-01-N9 asserts only that the shelf stays readable; it is listed in
   `eval/deferred.txt` and reported outside the verdict until the founder puts D-4 in.
 - **D-1 (deferred, no row).** The founder deferred it and, after TD-20 renamed the temporary file,
-  had its record carried with `Row: none`: the trigger is unreachable, so no row stages it.
+  had its record carried with `Row: none`. The record said the trigger was unreachable; by the
+  founder's instruction of 2026-10-30 (section 12, delta 4) it now says the crash is reachable only
+  by a directory named for the pid the process will get, and unlikely. No row stages it: the
+  founder's decision stands at `Row: none`, and a row that pre-created directories for the pids to
+  come would stage the application's process id, not a reader's act.
+- **A command killed while it writes (D-5, deferred).** The PRD is silent on a signal: its
+  Failed-command definition speaks of a non-zero exit code, which a killed process has none of. The
+  founder deferred the defect without choosing a behaviour, so no criterion states one; the
+  blueprint's Shutdown line records that the kill may leave the temporary file behind (section 12,
+  delta 4), and T-REQ-08-N5 asserts only that a later `done 1` finds a whole shelf and that the
+  directory then holds `shelf.json` alone. It is listed in `eval/deferred.txt` and reported outside
+  the verdict until the founder puts D-5 in. The row ends the command with SIGTERM only; SIGINT,
+  which the QA pass saw behave the same, and `kill -KILL`, which no fix of the record's options
+  could help, have no row.
+- **A symbolic link named `shelf.json` (D-6, deferred).** The PRD says the shelf is `shelf.json` in
+  the current directory and nothing about a link; the founder deferred the defect ("links aren't in
+  the PRD") without choosing a behaviour, so no criterion states one, and T-REQ-08-N6 asserts only
+  that a change `done` reports as made is on the linked file, or that the command was refused with
+  nothing changed, and that the link is still a link. It is listed in `eval/deferred.txt` and
+  reported outside the verdict until the founder puts D-6 in. Only `done` through a link has a row;
+  `add` and `drop` through a link, and `list` through a link (which works on `6ba654d`), have none.
 
 No acceptance criterion is without a row.
 
@@ -740,6 +774,14 @@ testable, because Q14 was narrowed to allow a row to check that the usage on std
   section 8 gains three gaps (a stdout write failure that is not a closed pipe, the id ceiling,
   D-1). The header names PRD revision 11 and blueprint revision 12. No existing row, state or
   `.expect` list changed.
+- **Revision 9.** Increment delta 4 (section 12): defects D-5 and D-6 deferred by the founder's
+  decision of 2026-10-30, and D-1's wording corrected at the founder's instruction of the same
+  day. Two deferred rows added, T-REQ-08-N5 (D-5) and T-REQ-08-N6 (D-6), as code in
+  `eval/tests/defects.test.mjs` and listed in `eval/deferred.txt` (103 rows); sections 2, 4, 5, 6
+  and 7 name them; section 8 gains two gaps (a command killed while it writes; a symbolic link
+  named `shelf.json`) and its D-1 entry carries the corrected wording. No story is added: the packet
+  has no story files. The header names PRD revision 12 and blueprint revision 13. No existing row,
+  state or `.expect` list changed.
 
 ## 12. Increment deltas
 
@@ -913,3 +955,98 @@ the one-phrase fix to blueprint section 9's 'Two stories'."
   and the rest); the id ceiling has no criterion and its row is deferred; D-1 has no row by the
   founder's decision. Section 9 is unchanged. Neither new row needs `chmod`, so neither is among
   the 15 permission rows, and both run as root too.
+
+### Delta 4: defects D-5 and D-6 deferred; D-1's wording corrected (2026-10-30)
+
+The founder's decision, in their words (2026-10-30, login ajpasco), answering the decision list of
+the QA pass of all on main `6ba654d`: "Defer both. D-5 deferred (record the stray file in the
+blueprint's Shutdown line); F-1 numbered D-6 and deferred (links aren't in the PRD). One deferral
+packet carries both, plus D-1's corrected wording." Their "F-1" with the reason "links aren't in the
+PRD" is the symbolic-link report, now D-6; the stray-file finding is D-5. Their instruction for the
+packet, the same day: "run /pod-works-increment for the D-5 and D-6 deferrals as one packet: both
+records, their rows listed in eval/deferred.txt, and D-1's record reworded to "reachable only by a
+directory named for the pid the process will get" (and "unlikely", not "unreachable"). No story
+files." The records are `docs/defects/D-5.md` and `docs/defects/D-6.md`; the PRD records the
+deferrals as amendment 4 and gains no criterion (PRD section 10); the blueprint's delta is section
+14, delta 4, which changes the Shutdown line of its section 12. This is a packet with no story
+(INCREMENT.md section 3): no `eval/stories/5.md`, `5.txt` or `5.expect` exists, nothing is built, and
+every row but the three `eval/deferred.txt` defers passes against main's `app/`.
+
+- **New rows:** two, both deferred and owned by no story yet. T-REQ-08-N5 (section 4, REQ-08), the
+  reproduction of D-5, tracing to REQ-08 c4 and REQ-03 c1 (section 5) and listed in
+  `eval/deferred.txt` as `T-REQ-08-N5 D-5`. Negative, because it asserts that nothing of an
+  interrupted command survives in the directory and that the shelf it left behind is whole. It
+  chooses no behaviour: a fix that lets a signalled command finish whole (D-5's option c) leaves
+  the shelf changed and the directory clean, so the later `done 1` succeeds again (PRD Q3, REQ-03
+  c3) and the row passes; a fix that removes stale temporary files on the next successful write
+  (option b) leaves the shelf as staged and the later `done 1` cleans up, so the row passes; under
+  option (a) it stays deferred. T-REQ-08-N6 (section 4, REQ-08), the reproduction of D-6, tracing
+  to REQ-03 c1 read through the link, PRD section 2 and the Failed command definition (section 5)
+  and listed as `T-REQ-08-N6 D-6`. Negative, because it asserts that a change reported as made is
+  not missing from the shelf the reader linked to, and that the link the reader made is not
+  replaced; it passes under a fix that follows the link (option a) or refuses a linked `shelf.json`
+  (option b), and under option (c) it stays deferred. **Changed rows:** none. **Retired rows:**
+  none; there is no story, so there is no `.retire` file either. The counts of section 7 become
+  103 rows.
+- **Rows as code.** Both are written in `eval/tests/defects.test.mjs` from their Given/When/Then,
+  under the D-4 row. T-REQ-08-N5 stages the 40 MB shelf in a fresh temporary directory, starts
+  `node app/shelf.mjs done 1` with its own asynchronous spawn (the harness's synchronous runner
+  cannot signal a running child), polls for the command's temporary file, `.shelf.json.<pid>.tmp`
+  (the name blueprint section 7 gives it, TD-20), and sends SIGTERM the moment it appears; a trial
+  whose child closed before the file was seen is inconclusive and the row stages again, up to five
+  trials, failing with `no trial of 5 saw the temporary file before the write ended` if none was
+  conclusive. After one conclusive trial it runs `done 1` with the harness's runner and then reads
+  the directory listing. It observes only exit codes, stdout, stderr and the directory listing; the
+  temporary file's name is read for the timing of the signal, never asserted, and the row imports
+  nothing from `app/`. T-REQ-08-N6 stages two directories under one fresh temporary directory,
+  `synced/` with the shelf and `here/` with `shelf.json` a symbolic link to it (an absolute link),
+  runs `done 1` in `here/` with the harness's runner, then `list` in `synced/` when the `done`
+  exited 0, and reads whether `here/shelf.json` is still a link; it observes only exit codes,
+  stdout, stderr, the linked file's bytes (when the `done` was refused) and the kind of the entry
+  the reader made. `eval/tap-to-rows.mjs`'s entry for `defects.test.mjs` becomes `['T-REQ-01-N9',
+  'T-REQ-08-N5', 'T-REQ-08-N6']`, so either new row is written `fail <id> did not finish` if it
+  does not run. `eval/tests/harness.mjs` is unchanged.
+- **Expected state against the current main**, story 4 merged (main at `6ba654d`). T-REQ-08-N5
+  fails: the store writes `.shelf.json.<pid>.tmp` and renames it over `shelf.json`, removing the
+  temporary file only when a step fails, so a SIGTERM between the write and the rename ends the
+  process with the file left behind and the old `shelf.json` whole; the later `done 1` exits 0,
+  prints `done 1 Dune` and removes only its own temporary file, so the listing is
+  `[".shelf.json.<pid>.tmp","shelf.json"]`; the row's reason is `trial 1: done 1 ended with exit
+  null (signal SIGTERM), and after a later successful done 1 the directory holds
+  [".shelf.json.<pid>.tmp","shelf.json"] where only shelf.json is expected` (the QA orchestrator's
+  six trials all saw the temporary file before the kill, so the first trial is expected to be
+  conclusive). T-REQ-08-N6 fails: `done 1` in `here/` exits 0 printing `done 1 Dune`, the rename
+  replaces the link with a regular file holding the change, and `synced/shelf.json` is unchanged,
+  so `list` there prints `1 to read Dune`; the row's reason is `done 1 exited 0 printing "done 1
+  Dune", yet the linked file lists "1 to read Dune\n"`. Both are listed in `eval/deferred.txt`, so
+  the runner leaves them out of the verdict run and writes them `deferred T-REQ-08-N5 D-5 ...` and
+  `deferred T-REQ-08-N6 D-6 ...` from the report run, beside `deferred T-REQ-01-N9 D-4 ...`; the
+  100 rows of stories 1 to 4 pass, and the run exits 0. The expected reasons are taken from the QA
+  orchestrator's reproductions of 2026-10-29 and 2026-10-30 on `6ba654d` (the QA run's
+  `orch-all-log.txt` and `orch-d6-log.txt`, local to the founder's machine), not from a run of the
+  rows by the drafter, whose session could not run `node`; the rehearsal is the run. There is no
+  `.expect`: a packet with no story has none, and a listed row does not fail the run.
+- **Why 40 MB and SIGTERM.** The failure needs the write of the temporary file to last long enough
+  for the row to see the file and send the signal before the rename; 1000 filler books of 40,000
+  characters make about 40 MB, which the QA pass found long enough in twelve trials of twelve, and
+  one `done 1` of it takes about a second. SIGTERM is the signal the QA pass used for half its
+  trials; SIGINT behaved the same and has no row. The size, the trial count of five and the signal
+  are the QA draft's, kept as a default proposed by the packet drafter.
+- **Packet files shipped:** `eval/deferred.txt` (two lines added); `docs/defects/D-5.md`,
+  `D-6.md` and the reworded `D-1.md`. No file under `eval/stories/`.
+- **Restraint.** No surface gains or loses a control: the four commands, their arguments, their
+  success lines and their refusals are as they were, and nothing is built. T-REQ-08-N5 is itself a
+  restraint-shaped assertion on the file surface (the directory holds `shelf.json` alone), as
+  T-REQ-01-N6 and T-REQ-08-N1 to N3 are; its kind stays `integration` because it reproduces a
+  defect rather than asserting the absence of an unrequested control. No restraint row is added.
+- **Gaps and untestable** (sections 8 and 9): section 8 gains two entries, a command killed while
+  it writes and a symbolic link named `shelf.json`, and its D-1 entry carries the corrected wording.
+  Section 9 is unchanged. Neither new row needs `chmod`, so neither is among the 15 permission
+  rows, and both run as root too.
+- **D-1's wording.** `docs/defects/D-1.md` said, in its `Row:` line and its closing paragraph, that
+  the trigger was unreachable after TD-20. By the founder's instruction quoted above it now says the
+  crash is reachable only by a directory named for the pid the process will get, and unlikely, with
+  the QA pass's check of 2026-10-29 on `6ba654d` as the evidence; its `Decision:` line is exactly as
+  it was, it keeps `Row: none`, and it has no line in `eval/deferred.txt`. Section 8's D-1 entry
+  and blueprint section 14, delta 3's note on D-1 carry the same correction, since both echoed the
+  record's word.
