@@ -1,6 +1,6 @@
 # PRD: shelf
 
-Revision 11.
+Revision 12.
 
 Source tags in brackets: "scope" is the confirmed Gate 1 idea; Q1 to Q19 are the recorded answers
 in `docs/PREPARATION-STATE.md`; D-numbers without a hyphen (D11) are the decisions recorded there.
@@ -406,6 +406,10 @@ precedence of argument errors and file errors.
   2026-10-28 and 2026-10-29; REQ-02 criterion 8 and the definition "Stdout closes early" added. No
   criterion changed or removed; no id reused. The legend names D-3. The records of D-4 and D-1,
   carried in the same packet, change no requirement, criterion or definition.
+- **Revision 12**: increment amendment 4 (section 10), defects D-5 and D-6 deferred by the
+  founder's decision of 2026-10-30, and D-1's record reworded at the founder's instruction of the
+  same day; no requirement, criterion or definition added, changed or removed; no id reused. The
+  legend is unchanged, since no criterion carries D-5 or D-6.
 
 ## 10. Increment amendments
 
@@ -456,3 +460,32 @@ dated, and names who decided, in their words.
   undecided, so no criterion states it, and its row is deferred in `eval/deferred.txt`. Section 7's
   non-goal "ship more than two stories" is left as written: story 4 is the fix of a defect under
   INCREMENT.md section 9, which the founder decided, not a feature.
+- **Amendment 4** (2026-10-30; decided by the founder, login ajpasco). Two defects found by the QA
+  pass of all on main `6ba654d` (2026-10-29), both deferred, and a record's wording corrected.
+  D-5 (`docs/defects/D-5.md`): a command killed while it writes leaves a stray temporary file
+  beside `shelf.json` for good, the shelf itself whole. D-6 (`docs/defects/D-6.md`): with
+  `shelf.json` a symbolic link to a file in another directory, `done 1` reports success, replaces
+  the link with a regular file and never changes the linked file. This PRD is silent on both: the
+  Failed-command definition (section 4) speaks of a non-zero exit code, which a killed process has
+  none of, and section 2 says only that the shelf is `shelf.json` in the current directory, nothing
+  about a link. Each record put three behaviours to the founder (D-5: record the stray file;
+  remove stale temporary files on the next successful write; let a signalled command finish whole.
+  D-6: follow the link and write its target; refuse a linked `shelf.json`; record a limitation). The
+  founder's decision, in their words: "Defer both. D-5 deferred (record the stray file in the
+  blueprint's Shutdown line); F-1 numbered D-6 and deferred (links aren't in the PRD). One deferral
+  packet carries both, plus D-1's corrected wording." (Their "F-1" with the reason "links aren't in
+  the PRD" is the symbolic-link report, now D-6; the stray-file finding is D-5.) "D-1's corrected
+  wording" is the phrasing "reachable only by a directory named for the pid the process will get"
+  and "unlikely", not "unreachable": wording proposed by the orchestrator at the founder's
+  instruction, not the founder's own words; it comes from the QA pass's check of 2026-10-29 on
+  `6ba654d`, which the orchestrator reported to the founder (`docs/defects/D-1.md`). No requirement,
+  criterion or definition is added, changed or removed, and no id is reused: the founder chose no
+  behaviour for either defect, so no criterion states one; the stray file is recorded in the
+  blueprint's Shutdown line (blueprint section 12 and section 14, delta 4), and the rows T-REQ-08-N5
+  (D-5) and T-REQ-03-N10 (D-6; under REQ-03 by the founder's decision of 2026-10-30, "it traces to
+  REQ-03 c1, and REQ-08's rows are refusals of unwritable files") are deferred in
+  `eval/deferred.txt` until the founder puts a defect in. D-1's record (`docs/defects/D-1.md`,
+  deferred 2026-10-28, no row) now says its crash is reachable only by a directory named for the pid
+  the process will get, and unlikely, where it said unreachable; its decision is unchanged. The
+  packet has no story and builds nothing (INCREMENT.md section 3, which gives a deferral packet no
+  story files).

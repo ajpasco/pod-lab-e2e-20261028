@@ -112,7 +112,7 @@ const STORY_IDS = {
   ],
   'story-3.test.mjs': ['T-REQ-08-N4'],
   'story-4.test.mjs': ['T-REQ-02-P7'],
-  'defects.test.mjs': ['T-REQ-01-N9'],
+  'defects.test.mjs': ['T-REQ-01-N9', 'T-REQ-08-N5', 'T-REQ-03-N10'],
 };
 
 function readIfExists(file) {

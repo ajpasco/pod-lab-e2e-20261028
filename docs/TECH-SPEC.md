@@ -1,8 +1,8 @@
 # Technical blueprint: shelf
 
-Revision 12
+Revision 13
 
-Blueprint of PRD revision 11 and mockup revision 6. (PRD revisions 6 and 7 changed one non-functional sentence, carried here as D11, and the tag legend; PRD revision 9 added increment amendment 1, carried here as section 14, delta 1, with no requirement or criterion changed; PRD revision 10 added REQ-08 c5 by increment amendment 2, carried here as section 14, delta 2; PRD revision 11 added REQ-02 c8 by increment amendment 3, carried here as section 14, delta 3.) Every `REQ-nn` below is an id the PRD gave; this
+Blueprint of PRD revision 12 and mockup revision 6. (PRD revisions 6 and 7 changed one non-functional sentence, carried here as D11, and the tag legend; PRD revision 9 added increment amendment 1, carried here as section 14, delta 1, with no requirement or criterion changed; PRD revision 10 added REQ-08 c5 by increment amendment 2, carried here as section 14, delta 2; PRD revision 11 added REQ-02 c8 by increment amendment 3, carried here as section 14, delta 3; PRD revision 12 recorded increment amendment 4, the deferrals of D-5 and D-6, carried here as section 14, delta 4, with no requirement or criterion changed.) Every `REQ-nn` below is an id the PRD gave; this
 document creates none. `D-<n>` with a hyphen is a defect record, `docs/defects/D-<n>.md`.
 
 Deciders are named as: **the user** (a recorded answer, Q-number or D-number of the preparation
@@ -417,7 +417,7 @@ command line, one person, own machine, no web app, no server, no database.
 | Concern | Answer |
 |---|---|
 | Start-up | In scope in the form that fits: nothing is read at import time; no configuration exists to fail; the file is read once, per command, after the arguments pass. Recorded default. |
-| Shutdown | In scope in the form that fits: all work is synchronous and ends with the process; the exit code is set on `process.exitCode`, so stdout is flushed. A kill mid-write leaves the old file whole (temporary and rename). Recorded default. |
+| Shutdown | In scope in the form that fits: all work is synchronous and ends with the process; the exit code is set on `process.exitCode`, so stdout is flushed. A kill mid-write leaves the old file whole (temporary and rename), and may leave the temporary file `.shelf.json.<pid>.tmp` behind beside it: the store removes its temporary file only when a step fails, and a signal that ends the process between the write and the rename runs nothing after it, so the stray stays until the reader deletes it, and a later successful command does not remove it (D-5, deferred by the founder, 2026-10-30, ajpasco: "record the stray file in the blueprint's Shutdown line"; delta 4). Recorded default; the stray file is recorded, not decided: the founder chose no behaviour for it, and D-5's row T-REQ-08-N5 is deferred in `eval/deferred.txt`. |
 | Health | Excluded: no platform polls a command-line tool. Excluded: recorded default derived from the scope ("not a web app, a server or a database"); brought back by a platform that polls shelf. |
 | Timeouts | Excluded: no outbound call. Excluded: recorded default derived from the scope ("not a web app, a server or a database"); brought back by any outbound call. |
 | Shared objects | In scope: `shelf.json` is the one; decided in section 8: no lock, last write wins (recorded default). The recommended enforcement in the store is declined for a file: recorded default, accepted by the user (Q18 item 6, D9). Delta 2 (D-2, the founder): each writer's temporary file is its own (TD-20); "no lock, last write wins" stands. |
@@ -652,10 +652,58 @@ amendment 3).
   and TD-7 stand as they are, and the register gains no row for it (the row traces to REQ-01 c1
   and c2 and the PRD's Corrupt definition, whose register rows exist). D-1 (`docs/defects/D-1.md`,
   deferred, no row): its trigger, a directory named `.shelf.json.tmp`, is unreachable since TD-20
-  named the temporary file for the writing process; section 7's write method stands. Section 9's
+  named the temporary file for the writing process (wording corrected by delta 4, at the founder's
+  instruction of 2026-10-30 and in phrasing the orchestrator proposed: the crash is reachable only
+  by a directory named for the pid the process will get, and unlikely, not unreachable); section
+  7's write method stands. Section 9's
   opening sentence gains the phrase "then one per increment the founder decides (section 14)": the
   founder asked for a one-phrase fix and gave no wording, so the wording is a default proposed by
   the packet drafter.
+
+### Delta 4: defects D-5 and D-6 deferred; D-1's wording corrected (2026-10-30)
+
+The founder's decision, in their words (2026-10-30, login ajpasco), answering the decision list of
+the QA pass of all on main `6ba654d`: "Defer both. D-5 deferred (record the stray file in the
+blueprint's Shutdown line); F-1 numbered D-6 and deferred (links aren't in the PRD). One deferral
+packet carries both, plus D-1's corrected wording." Their "F-1" with the reason "links aren't in the
+PRD" is the symbolic-link report, now D-6; the stray-file finding is D-5. "D-1's corrected wording"
+is the phrasing "reachable only by a directory named for the pid the process will get" and
+"unlikely", not "unreachable": wording proposed by the orchestrator at the founder's instruction,
+not the founder's own words; it comes from the QA pass's check of 2026-10-29 on `6ba654d`, which the
+orchestrator reported to the founder (`docs/defects/D-1.md`). The records are `docs/defects/D-5.md`
+and `docs/defects/D-6.md`; the PRD records the deferrals as amendment 4 and gains no criterion (PRD
+section 10). This is a packet with no story (INCREMENT.md section 3, which gives a deferral packet
+no story files): nothing is built, no layer changes, and no story edits a file.
+
+- **Layer.** None changes. For the record, a fix of D-5 would land in the boundary (`app/shelf.mjs`,
+  option c of its record) or the store (`app/src/store.mjs`, option b), and a fix of D-6 in the store
+  (resolve the real path of `shelf.json` before the temporary file and rename); neither is decided,
+  and neither is built by this packet.
+- **Pinned contract.** No line of section 10 changes: no message, exit code, usage text or success
+  line moves. Section 7's write method stands as it is, D-6's case included: it names no linked
+  `shelf.json`, and the founder chose no behaviour for one. Section 12, Reliability, "Shutdown"
+  gains the fate of the temporary file, by the founder's decision on D-5: a kill mid-write still
+  leaves the old file whole, and may leave `.shelf.json.<pid>.tmp` behind beside it, which a later
+  successful command does not remove. That line records what the application does; it decides
+  nothing new, and the stray file is not accepted as a limitation in section 11, since the founder
+  deferred the defect rather than closing it.
+- **Verification register.** No criterion is new or changed, so no register row is added or
+  changed (82 rows). The two deferred rows, T-REQ-08-N5 (D-5) and T-REQ-03-N10 (D-6), are in
+  `eval/tests/defects.test.mjs` and listed in `eval/deferred.txt`; each traces to criteria whose
+  register rows exist (REQ-03 c1 and REQ-08 c4 for T-REQ-08-N5; REQ-03 c1 and the PRD's Failed
+  command definition for T-REQ-03-N10, placed under REQ-03 by the founder's decision of 2026-10-30:
+  "it traces to REQ-03 c1, and REQ-08's rows are refusals of unwritable files"; eval plan section
+  12, delta 4) and states no behaviour the founder has not decided.
+- **Technical choices the build needs, and who decided.** None: nothing is built. TD-8 (temporary
+  file and rename), TD-20 (the temporary file named for the writing process) and TD-11 (an
+  unclassified failure prints its stack once) stand. D-1's correction changes no decision: the
+  `fs.rmSync(TEMP_FILE, { force: true })` in `writeShelf`'s catch, which throws on a directory of
+  that name, is unchanged on `6ba654d`, and the record now says the crash is reachable only by a
+  directory named for the pid the process will get, and unlikely, as the QA pass of all checked
+  (`docs/defects/D-1.md`). The decision on D-1 (deferred, 2026-10-28) is as it was.
+- **Conventions and production readiness.** No convention is needed that section 13 does not
+  state, and the conventions step gains and changes no tool; the layout tree is unchanged
+  (`eval/deferred.txt` is already in it). Section 12 changes the one line named above.
 
 ## Change log
 
@@ -710,3 +758,8 @@ amendment 3).
   table, section 12's "Output write failure (stdout closed)" and "Errors" lines, and section 13's
   Errors row and layout tree (`eval/deferred.txt`) changed to match. The register gains one row,
   REQ-02 c8 (82 rows). D-4 and D-1, carried in the same packet, change no decision.
+- **Revision 13:** increment delta 4 (section 14): defects D-5 and D-6 deferred by the founder's
+  decision of 2026-10-30, and D-1's wording corrected at the founder's instruction of the same day;
+  the header names PRD revision 12. Section 12's "Shutdown" line gains the fate of the temporary
+  file after a kill mid-write (D-5); delta 3's note on D-1 carries the correction. No decision,
+  convention or contract line changed otherwise. The register is unchanged (82 rows).

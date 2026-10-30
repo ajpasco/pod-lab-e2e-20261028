@@ -1,3 +1,5 @@
 # Deferred rows: one `<row id> D-<k>` per line (INCREMENT.md section 9). The runner leaves each
 # listed row out of the verdict run and reports it apart, as `deferred <id> D-<k> <reason>`.
 T-REQ-01-N9 D-4
+T-REQ-08-N5 D-5
+T-REQ-03-N10 D-6
