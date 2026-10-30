@@ -2,4 +2,4 @@
 # listed row out of the verdict run and reports it apart, as `deferred <id> D-<k> <reason>`.
 T-REQ-01-N9 D-4
 T-REQ-08-N5 D-5
-T-REQ-08-N6 D-6
+T-REQ-03-N10 D-6

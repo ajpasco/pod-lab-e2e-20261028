@@ -474,15 +474,18 @@ dated, and names who decided, in their words.
   founder's decision, in their words: "Defer both. D-5 deferred (record the stray file in the
   blueprint's Shutdown line); F-1 numbered D-6 and deferred (links aren't in the PRD). One deferral
   packet carries both, plus D-1's corrected wording." (Their "F-1" with the reason "links aren't in
-  the PRD" is the symbolic-link report, now D-6; the stray-file finding is D-5.) Their instruction
-  for the packet, the same day: "run /pod-works-increment for the D-5 and D-6 deferrals as one
-  packet: both records, their rows listed in eval/deferred.txt, and D-1's record reworded to
-  "reachable only by a directory named for the pid the process will get" (and "unlikely", not
-  "unreachable"). No story files." No requirement, criterion or definition is added, changed or
-  removed, and no id is reused: the founder chose no behaviour for either defect, so no criterion
-  states one; the stray file is recorded in the blueprint's Shutdown line (blueprint section 12 and
-  section 14, delta 4), and the rows T-REQ-08-N5 (D-5) and T-REQ-08-N6 (D-6) are deferred in
+  the PRD" is the symbolic-link report, now D-6; the stray-file finding is D-5.) "D-1's corrected
+  wording" is the phrasing "reachable only by a directory named for the pid the process will get"
+  and "unlikely", not "unreachable": wording proposed by the orchestrator at the founder's
+  instruction, not the founder's own words; it comes from the QA pass's check of 2026-10-29 on
+  `6ba654d`, which the orchestrator reported to the founder (`docs/defects/D-1.md`). No requirement,
+  criterion or definition is added, changed or removed, and no id is reused: the founder chose no
+  behaviour for either defect, so no criterion states one; the stray file is recorded in the
+  blueprint's Shutdown line (blueprint section 12 and section 14, delta 4), and the rows T-REQ-08-N5
+  (D-5) and T-REQ-03-N10 (D-6; under REQ-03 by the founder's decision of 2026-10-30, "it traces to
+  REQ-03 c1, and REQ-08's rows are refusals of unwritable files") are deferred in
   `eval/deferred.txt` until the founder puts a defect in. D-1's record (`docs/defects/D-1.md`,
   deferred 2026-10-28, no row) now says its crash is reachable only by a directory named for the pid
   the process will get, and unlikely, where it said unreachable; its decision is unchanged. The
-  packet has no story and builds nothing (INCREMENT.md section 3).
+  packet has no story and builds nothing (INCREMENT.md section 3, which gives a deferral packet no
+  story files).

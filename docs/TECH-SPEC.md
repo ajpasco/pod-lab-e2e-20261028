@@ -653,8 +653,9 @@ amendment 3).
   and c2 and the PRD's Corrupt definition, whose register rows exist). D-1 (`docs/defects/D-1.md`,
   deferred, no row): its trigger, a directory named `.shelf.json.tmp`, is unreachable since TD-20
   named the temporary file for the writing process (wording corrected by delta 4, at the founder's
-  instruction of 2026-10-30: the crash is reachable only by a directory named for the pid the
-  process will get, and unlikely, not unreachable); section 7's write method stands. Section 9's
+  instruction of 2026-10-30 and in phrasing the orchestrator proposed: the crash is reachable only
+  by a directory named for the pid the process will get, and unlikely, not unreachable); section
+  7's write method stands. Section 9's
   opening sentence gains the phrase "then one per increment the founder decides (section 14)": the
   founder asked for a one-phrase fix and gave no wording, so the wording is a default proposed by
   the packet drafter.
@@ -665,13 +666,14 @@ The founder's decision, in their words (2026-10-30, login ajpasco), answering th
 the QA pass of all on main `6ba654d`: "Defer both. D-5 deferred (record the stray file in the
 blueprint's Shutdown line); F-1 numbered D-6 and deferred (links aren't in the PRD). One deferral
 packet carries both, plus D-1's corrected wording." Their "F-1" with the reason "links aren't in the
-PRD" is the symbolic-link report, now D-6; the stray-file finding is D-5. Their instruction for the
-packet, the same day: "run /pod-works-increment for the D-5 and D-6 deferrals as one packet: both
-records, their rows listed in eval/deferred.txt, and D-1's record reworded to "reachable only by a
-directory named for the pid the process will get" (and "unlikely", not "unreachable"). No story
-files." The records are `docs/defects/D-5.md` and `docs/defects/D-6.md`; the PRD records the
-deferrals as amendment 4 and gains no criterion (PRD section 10). This is a packet with no story
-(INCREMENT.md section 3): nothing is built, no layer changes, and no story edits a file.
+PRD" is the symbolic-link report, now D-6; the stray-file finding is D-5. "D-1's corrected wording"
+is the phrasing "reachable only by a directory named for the pid the process will get" and
+"unlikely", not "unreachable": wording proposed by the orchestrator at the founder's instruction,
+not the founder's own words; it comes from the QA pass's check of 2026-10-29 on `6ba654d`, which the
+orchestrator reported to the founder (`docs/defects/D-1.md`). The records are `docs/defects/D-5.md`
+and `docs/defects/D-6.md`; the PRD records the deferrals as amendment 4 and gains no criterion (PRD
+section 10). This is a packet with no story (INCREMENT.md section 3, which gives a deferral packet
+no story files): nothing is built, no layer changes, and no story edits a file.
 
 - **Layer.** None changes. For the record, a fix of D-5 would land in the boundary (`app/shelf.mjs`,
   option c of its record) or the store (`app/src/store.mjs`, option b), and a fix of D-6 in the store
@@ -686,11 +688,12 @@ deferrals as amendment 4 and gains no criterion (PRD section 10). This is a pack
   nothing new, and the stray file is not accepted as a limitation in section 11, since the founder
   deferred the defect rather than closing it.
 - **Verification register.** No criterion is new or changed, so no register row is added or
-  changed (82 rows). The two deferred rows, T-REQ-08-N5 (D-5) and T-REQ-08-N6 (D-6), are in
+  changed (82 rows). The two deferred rows, T-REQ-08-N5 (D-5) and T-REQ-03-N10 (D-6), are in
   `eval/tests/defects.test.mjs` and listed in `eval/deferred.txt`; each traces to criteria whose
   register rows exist (REQ-03 c1 and REQ-08 c4 for T-REQ-08-N5; REQ-03 c1 and the PRD's Failed
-  command definition for T-REQ-08-N6; eval plan section 12, delta 4) and states no behaviour the
-  founder has not decided.
+  command definition for T-REQ-03-N10, placed under REQ-03 by the founder's decision of 2026-10-30:
+  "it traces to REQ-03 c1, and REQ-08's rows are refusals of unwritable files"; eval plan section
+  12, delta 4) and states no behaviour the founder has not decided.
 - **Technical choices the build needs, and who decided.** None: nothing is built. TD-8 (temporary
   file and rename), TD-20 (the temporary file named for the writing process) and TD-11 (an
   unclassified failure prints its stack once) stand. D-1's correction changes no decision: the

@@ -114,7 +114,7 @@ test('T-REQ-08-N5 a done killed while it writes leaves a whole shelf and nothing
 // command), and that shelf.json is still what the reader made it, a link. It passes whether a fix
 // follows the link (D-6's option a) or refuses a linked shelf.json (option b), and under option (c)
 // it stays deferred; it chooses none of them.
-test('T-REQ-08-N6 a done through a symbolic link named shelf.json reaches the linked file or is refused', () => {
+test('T-REQ-03-N10 a done through a symbolic link named shelf.json reaches the linked file or is refused', () => {
   const base = tempDir();
   try {
     const target = path.join(base, 'synced');
